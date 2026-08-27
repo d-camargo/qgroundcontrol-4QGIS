@@ -1,0 +1,81 @@
+"""QGC4QGIS Plugin main class implementation."""
+
+import os
+from typing import TYPE_CHECKING
+
+from qgis.core import QgsApplication
+from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtWidgets import QAction
+
+from qgc4qgis.processing.provider import Qgc4QgisProvider
+
+if TYPE_CHECKING:
+    from qgc4qgis.gui.dock import QgcPlanningDockWidget
+
+
+class Qgc4QgisPlugin:
+    """QGIS Plugin to integrate QGroundControl functionalities."""
+
+    NAME = "QGC4QGIS"
+    VERSION = "0.1.0"
+
+    def __init__(self, iface):
+        """Constructor.
+
+        :param iface: An interface instance that will be passed to this class
+            which gives the plugin access to the QGIS GUI.
+        """
+        self.iface = iface
+        self.action: QAction | None = None
+        self.provider: Qgc4QgisProvider | None = None
+        self.dock_widget: QgcPlanningDockWidget | None = None
+
+    def initProcessing(self) -> None:
+        """Initialize and register the Processing provider."""
+        if self.provider is None:
+            self.provider = Qgc4QgisProvider()
+            QgsApplication.processingRegistry().addProvider(self.provider)
+
+    def initGui(self) -> None:
+        """Create the menu entries and toolbar icons inside the QGIS GUI."""
+        self.initProcessing()
+
+        icon_path = os.path.join(os.path.dirname(__file__), "resources", "icon.svg")
+        icon = QIcon(icon_path)
+
+        self.action = QAction(icon, self.NAME, self.iface.mainWindow())
+        self.action.setStatusTip(f"{self.NAME} - Versão {self.VERSION}")
+        self.action.triggered.connect(self.run)
+
+        # Adiciona a ação ao menu Vetor ▸ QGC4QGIS e à barra de ferramentas de vetor
+        self.iface.addPluginToVectorMenu(self.NAME, self.action)
+        self.iface.addVectorToolBarIcon(self.action)
+
+    def unload(self) -> None:
+        """Remove the plugin menu item, icon, dock widget, and processing provider from QGIS GUI."""
+        if self.dock_widget is not None:
+            self.dock_widget.unload()
+            self.iface.removeDockWidget(self.dock_widget)
+            self.dock_widget.deleteLater()
+            self.dock_widget = None
+
+        if self.provider:
+            QgsApplication.processingRegistry().removeProvider(self.provider)
+            self.provider = None
+
+        if self.action:
+            self.iface.removeVectorToolBarIcon(self.action)
+            self.iface.removePluginVectorMenu(self.NAME, self.action)
+            del self.action
+
+    def run(self) -> None:
+        """Run method that shows or toggles the Planejamento QGC dock panel."""
+        if self.dock_widget is None:
+            from qgc4qgis.gui.dock import QgcPlanningDockWidget
+
+            self.dock_widget = QgcPlanningDockWidget(self.iface.mainWindow())
+            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
+
+        self.dock_widget.show()
+        self.dock_widget.raise_()

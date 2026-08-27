@@ -36,7 +36,7 @@ ignore = [
 ]
 
 [lint.isort]
-known-first-party = ["qgc"]
+known-first-party = ["qgc", "qgc4qgis"]
 
 [lint.per-file-ignores]
 "test/**/*.py" = ["B011"]  # Allow assert in tests

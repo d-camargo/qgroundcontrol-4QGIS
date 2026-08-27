@@ -1,0 +1,9 @@
+[general]
+name=QGC4QGIS
+qgisMinimumVersion=3.34
+description=Plugin de integração do QGroundControl com o QGIS.
+about=Integração do QGroundControl com o QGIS para planejamento e gerenciamento de missões de UAV/drones.
+version=0.1.0
+author=Diego Camargo
+repository=https://github.com/d-camargo/qgroundcontrol-4QGIS
+hasProcessingProvider=yes

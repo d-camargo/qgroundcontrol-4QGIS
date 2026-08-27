@@ -1,0 +1,525 @@
+"""Processing algorithm to generate photo centers and oriented footprint polygons from flight transects or polygon layers."""
+
+import math
+
+from qgis.core import (
+    Qgis,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsFeature,
+    QgsFeatureSink,
+    QgsField,
+    QgsFields,
+    QgsGeometry,
+    QgsPointXY,
+    QgsProcessing,
+    QgsProcessingAlgorithm,
+    QgsProcessingException,
+    QgsProcessingParameterBoolean,
+    QgsProcessingParameterEnum,
+    QgsProcessingParameterFeatureSink,
+    QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterNumber,
+)
+from qgis.PyQt.QtCore import QVariant
+
+from qgc4qgis.core.cameracalc import CameraCalc
+from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
+from qgc4qgis.core.geo import AEQDProjection
+from qgc4qgis.core.survey import generate_survey_transects
+from qgc4qgis.processing.alg_survey_grid import extract_polygons
+
+
+def extract_lines(geom: QgsGeometry) -> list[list[tuple[float, float]]]:
+    """Extract line vertices (lat, lon) for each line in a linestring or multilinestring geometry."""
+    lines: list[list[tuple[float, float]]] = []
+    if geom.isMultipart():
+        multi = geom.asMultiPolyline()
+        for line in multi:
+            if line:
+                lines.append([(float(p.y()), float(p.x())) for p in line])
+    else:
+        line = geom.asPolyline()
+        if line:
+            lines.append([(float(p.y()), float(p.x())) for p in line])
+    return lines
+
+
+class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
+    """QGIS Processing Algorithm to generate photo centers and footprint polygons."""
+
+    INPUT = "INPUT"
+    CAMERA = "CAMERA"
+    ALTITUDE = "ALTITUDE"
+    GSD = "GSD"
+    OVERLAP_SIDE = "OVERLAP_SIDE"
+    OVERLAP_FRONTAL = "OVERLAP_FRONTAL"
+    ANGLE = "ANGLE"
+    TURNAROUND = "TURNAROUND"
+    ENTRY_LOCATION = "ENTRY_LOCATION"
+    REFLY = "REFLY"
+    SENSOR_WIDTH = "SENSOR_WIDTH"
+    SENSOR_HEIGHT = "SENSOR_HEIGHT"
+    IMAGE_WIDTH = "IMAGE_WIDTH"
+    IMAGE_HEIGHT = "IMAGE_HEIGHT"
+    FOCAL_LENGTH = "FOCAL_LENGTH"
+    OUTPUT_CENTERS = "OUTPUT_CENTERS"
+    OUTPUT_FOOTPRINTS = "OUTPUT_FOOTPRINTS"
+
+    def name(self) -> str:
+        """Return unique algorithm name."""
+        return "gerar_centros_foto"
+
+    def displayName(self) -> str:
+        """Return localized human-readable algorithm name."""
+        return "Gerar centros de foto e pegadas"
+
+    def group(self) -> str:
+        """Return localized group name."""
+        return "Planejamento de Voo"
+
+    def groupId(self) -> str:
+        """Return unique group identifier."""
+        return "planejamento_voo"
+
+    def createInstance(self) -> "PhotoCentersAlgorithm":
+        """Create new instance of algorithm."""
+        return PhotoCentersAlgorithm()
+
+    def shortHelpString(self) -> str:
+        """Return short help text for algorithm GUI."""
+        return (
+            "Gera camadas de pontos de centros de tomada de foto e polígonos de pegadas (footprints) "
+            "orientados pelo azimute dos transectos de voo."
+        )
+
+    def initAlgorithm(self, config=None) -> None:
+        """Define algorithm parameters and outputs."""
+        cameras = load_cameras()
+        camera_names = [c.canonicalName for c in cameras]
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSource(
+                self.INPUT,
+                "Camada de entrada (Polígonos ou Linhas)",
+                [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.CAMERA,
+                "Câmera",
+                options=camera_names,
+                defaultValue=0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ALTITUDE,
+                "Altura de voo (m)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=100.0,
+                minValue=0.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.GSD,
+                "GSD (cm/px) - se > 0 sobrescreve/calcula altura",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=0.0,
+                minValue=0.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.OVERLAP_SIDE,
+                "Sobreposição lateral (%)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=70.0,
+                minValue=0.0,
+                maxValue=99.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.OVERLAP_FRONTAL,
+                "Sobreposição frontal (%)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=70.0,
+                minValue=0.0,
+                maxValue=99.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ANGLE,
+                "Ângulo da grade (graus)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=0.0,
+                minValue=-180.0,
+                maxValue=180.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.TURNAROUND,
+                "Distância de turnaround (m)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=0.0,
+                minValue=0.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.ENTRY_LOCATION,
+                "Ponto de entrada",
+                options=["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"],
+                defaultValue=0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.REFLY,
+                "Grade cruzada (Refly 90°)",
+                defaultValue=False,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.SENSOR_WIDTH,
+                "Câmera manual: Largura do sensor (mm)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=35.9,
+                minValue=0.0,
+                optional=True,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.SENSOR_HEIGHT,
+                "Câmera manual: Altura do sensor (mm)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=24.0,
+                minValue=0.0,
+                optional=True,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.IMAGE_WIDTH,
+                "Câmera manual: Largura da imagem (px)",
+                QgsProcessingParameterNumber.Integer,
+                defaultValue=7952,
+                minValue=0,
+                optional=True,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.IMAGE_HEIGHT,
+                "Câmera manual: Altura da imagem (px)",
+                QgsProcessingParameterNumber.Integer,
+                defaultValue=5304,
+                minValue=0,
+                optional=True,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.FOCAL_LENGTH,
+                "Câmera manual: Distância focal (mm)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=35.0,
+                minValue=0.0,
+                optional=True,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_CENTERS,
+                "Centros de foto (Pontos)",
+                QgsProcessing.TypeVectorPoint,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
+                self.OUTPUT_FOOTPRINTS,
+                "Pegadas de foto (Polígonos)",
+                QgsProcessing.TypeVectorPolygon,
+            )
+        )
+
+    def processAlgorithm(self, parameters, context, feedback):
+        """Execute photo centers and footprint polygon generation algorithm logic."""
+        source = self.parameterAsSource(parameters, self.INPUT, context)
+        if source is None:
+            raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
+        camera_idx = self.parameterAsEnum(parameters, self.CAMERA, context)
+        cameras = load_cameras()
+        if 0 <= camera_idx < len(cameras):
+            spec = cameras[camera_idx]
+        else:
+            spec = cameras[0]
+
+        if spec.canonicalName == CUSTOM_CAMERA_NAME:
+            sensor_w = self.parameterAsDouble(parameters, self.SENSOR_WIDTH, context)
+            sensor_h = self.parameterAsDouble(parameters, self.SENSOR_HEIGHT, context)
+            img_w = self.parameterAsInt(parameters, self.IMAGE_WIDTH, context)
+            img_h = self.parameterAsInt(parameters, self.IMAGE_HEIGHT, context)
+            focal_l = self.parameterAsDouble(parameters, self.FOCAL_LENGTH, context)
+            spec = CameraSpec(
+                canonicalName=CUSTOM_CAMERA_NAME,
+                sensorWidth=sensor_w,
+                sensorHeight=sensor_h,
+                imageWidth=img_w,
+                imageHeight=img_h,
+                focalLength=focal_l,
+            )
+
+        altitude = self.parameterAsDouble(parameters, self.ALTITUDE, context)
+        gsd = self.parameterAsDouble(parameters, self.GSD, context)
+        side_overlap = self.parameterAsDouble(parameters, self.OVERLAP_SIDE, context)
+        frontal_overlap = self.parameterAsDouble(parameters, self.OVERLAP_FRONTAL, context)
+        grid_angle = self.parameterAsDouble(parameters, self.ANGLE, context)
+        turnaround = self.parameterAsDouble(parameters, self.TURNAROUND, context)
+        entry_loc = self.parameterAsEnum(parameters, self.ENTRY_LOCATION, context)
+        refly = self.parameterAsBool(parameters, self.REFLY, context)
+
+        value_set_is_distance = gsd <= 0.0
+        calc = CameraCalc(
+            spec=spec,
+            value_set_is_distance=value_set_is_distance,
+            distance_to_surface=altitude,
+            image_density=gsd,
+            frontal_overlap=frontal_overlap,
+            side_overlap=side_overlap,
+        )
+
+        if not calc.recalculate():
+            raise QgsProcessingException("Falha ao calcular os parâmetros da câmera/voo.")
+
+        center_fields = QgsFields()
+        center_fields.append(QgsField("id", QVariant.Int))
+        center_fields.append(QgsField("transect_id", QVariant.Int))
+        center_fields.append(QgsField("photo_id", QVariant.Int))
+        center_fields.append(QgsField("lat", QVariant.Double))
+        center_fields.append(QgsField("lon", QVariant.Double))
+        center_fields.append(QgsField("altitude_m", QVariant.Double))
+        center_fields.append(QgsField("azimuth_deg", QVariant.Double))
+        center_fields.append(QgsField("gsd_cm", QVariant.Double))
+        center_fields.append(QgsField("camera", QVariant.String))
+
+        footprint_fields = QgsFields()
+        footprint_fields.append(QgsField("id", QVariant.Int))
+        footprint_fields.append(QgsField("transect_id", QVariant.Int))
+        footprint_fields.append(QgsField("photo_id", QVariant.Int))
+        footprint_fields.append(QgsField("altitude_m", QVariant.Double))
+        footprint_fields.append(QgsField("azimuth_deg", QVariant.Double))
+        footprint_fields.append(QgsField("area_m2", QVariant.Double))
+        footprint_fields.append(QgsField("gsd_cm", QVariant.Double))
+        footprint_fields.append(QgsField("camera", QVariant.String))
+
+        centers_param_key = (
+            self.OUTPUT_CENTERS
+            if self.OUTPUT_CENTERS in parameters
+            else ("OUTPUT" if "OUTPUT" in parameters else self.OUTPUT_CENTERS)
+        )
+
+        (centers_sink, dest_centers_id) = self.parameterAsSink(
+            parameters,
+            centers_param_key,
+            context,
+            center_fields,
+            Qgis.WkbType.Point,
+            source.sourceCrs(),
+        )
+        if centers_sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, centers_param_key))
+
+        (footprints_sink, dest_footprints_id) = self.parameterAsSink(
+            parameters,
+            self.OUTPUT_FOOTPRINTS,
+            context,
+            footprint_fields,
+            Qgis.WkbType.Polygon,
+            source.sourceCrs(),
+        )
+        if footprints_sink is None:
+            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_FOOTPRINTS))
+
+        crs_wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
+        source_crs = source.sourceCrs()
+        need_transform = source_crs != crs_wgs84
+        if need_transform:
+            to_wgs84 = QgsCoordinateTransform(source_crs, crs_wgs84, context.transformContext())
+            to_source = QgsCoordinateTransform(crs_wgs84, source_crs, context.transformContext())
+
+        feature_count = source.featureCount()
+        total_steps = feature_count if feature_count > 0 else 100
+        step = 0
+        global_photo_id = 1
+        transect_id = 1
+
+        trig_dist = calc.trigger_distance
+        fp_side = calc.image_footprint_side
+        fp_frontal = calc.image_footprint_frontal
+        fp_area = fp_side * fp_frontal
+
+        for feature in source.getFeatures():
+            if feedback.isCanceled():
+                break
+
+            geom = feature.geometry()
+            if geom.isEmpty() or geom.isNull():
+                continue
+
+            geom_wgs84 = QgsGeometry(geom)
+            if need_transform:
+                geom_wgs84.transform(to_wgs84)
+
+            geom_type = geom_wgs84.type()
+
+            transects_list: list[list[tuple[float, float]]] = []
+
+            if geom_type == Qgis.GeometryType.Polygon:
+                polygons = extract_polygons(geom_wgs84)
+                for polygon_pts in polygons:
+                    if len(polygon_pts) < 3:
+                        continue
+                    ref_lat, ref_lon = polygon_pts[0]
+                    proj = AEQDProjection(ref_lat, ref_lon)
+                    planar_pts = [proj.forward(lat, lon) for lat, lon in polygon_pts]
+                    generated_transects = generate_survey_transects(
+                        polygon_points=planar_pts,
+                        grid_angle=grid_angle,
+                        grid_spacing=calc.adjusted_footprint_side,
+                        entry_location=entry_loc,
+                        turnaround_distance=turnaround,
+                        refly_90_degrees=refly,
+                    )
+                    for tr in generated_transects:
+                        geo_pts = [proj.inverse(x, y) for x, y in tr]
+                        transects_list.append(geo_pts)
+            elif geom_type == Qgis.GeometryType.Line:
+                lines = extract_lines(geom_wgs84)
+                transects_list.extend(lines)
+
+            for geo_pts in transects_list:
+                if feedback.isCanceled():
+                    break
+                if len(geo_pts) < 2:
+                    continue
+
+                ref_lat, ref_lon = geo_pts[0]
+                proj = AEQDProjection(ref_lat, ref_lon)
+                planar_transect = [proj.forward(lat, lon) for lat, lon in geo_pts]
+
+                photo_in_transect_id = 1
+
+                for k in range(len(planar_transect) - 1):
+                    p1 = planar_transect[k]
+                    p2 = planar_transect[k + 1]
+                    dx = p2[0] - p1[0]
+                    dy = p2[1] - p1[1]
+                    seg_len = math.hypot(dx, dy)
+                    if seg_len < 1e-6:
+                        continue
+
+                    ux = dx / seg_len
+                    uy = dy / seg_len
+                    azimuth_deg = math.degrees(math.atan2(ux, uy)) % 360.0
+
+                    d = 0.0
+                    while d <= seg_len + 1e-6:
+                        px = p1[0] + d * ux
+                        py = p1[1] + d * uy
+                        lat_p, lon_p = proj.inverse(px, py)
+
+                        pt_geom = QgsGeometry.fromPointXY(QgsPointXY(lon_p, lat_p))
+                        if need_transform:
+                            pt_geom.transform(to_source)
+
+                        c_feat = QgsFeature()
+                        c_feat.setGeometry(pt_geom)
+                        c_feat.setAttributes(
+                            [
+                                global_photo_id,
+                                transect_id,
+                                photo_in_transect_id,
+                                round(lat_p, 7),
+                                round(lon_p, 7),
+                                round(calc.distance_to_surface, 2),
+                                round(azimuth_deg, 1),
+                                round(calc.image_density, 2),
+                                spec.canonicalName,
+                            ]
+                        )
+                        centers_sink.addFeature(c_feat, QgsFeatureSink.FastInsert)
+
+                        h = fp_frontal / 2.0
+                        w = fp_side / 2.0
+                        c1 = (px + h * ux + w * uy, py + h * uy - w * ux)
+                        c2 = (px - h * ux + w * uy, py - h * uy - w * ux)
+                        c3 = (px - h * ux - w * uy, py - h * uy + w * ux)
+                        c4 = (px + h * ux - w * uy, py + h * uy + w * ux)
+
+                        poly_pts = []
+                        for cx, cy in [c1, c2, c3, c4]:
+                            c_lat, c_lon = proj.inverse(cx, cy)
+                            poly_pts.append(QgsPointXY(c_lon, c_lat))
+                        poly_pts.append(poly_pts[0])
+
+                        fp_geom = QgsGeometry.fromPolygonXY([poly_pts])
+                        if need_transform:
+                            fp_geom.transform(to_source)
+
+                        fp_feat = QgsFeature()
+                        fp_feat.setGeometry(fp_geom)
+                        fp_feat.setAttributes(
+                            [
+                                global_photo_id,
+                                transect_id,
+                                photo_in_transect_id,
+                                round(calc.distance_to_surface, 2),
+                                round(azimuth_deg, 1),
+                                round(fp_area, 2),
+                                round(calc.image_density, 2),
+                                spec.canonicalName,
+                            ]
+                        )
+                        footprints_sink.addFeature(fp_feat, QgsFeatureSink.FastInsert)
+
+                        global_photo_id += 1
+                        photo_in_transect_id += 1
+
+                        if trig_dist <= 0.0:
+                            break
+                        d += trig_dist
+
+                transect_id += 1
+
+            step += 1
+            feedback.setProgress(int(100.0 * step / total_steps))
+
+        return {
+            self.OUTPUT_CENTERS: dest_centers_id,
+            self.OUTPUT_FOOTPRINTS: dest_footprints_id,
+        }
