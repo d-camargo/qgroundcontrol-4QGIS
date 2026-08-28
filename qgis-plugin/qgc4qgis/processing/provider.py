@@ -3,6 +3,8 @@
 from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 
+from qgc4qgis.processing.alg_export_dji import ExportDjiAlgorithm
+from qgc4qgis.processing.alg_export_litchi import ExportLitchiAlgorithm
 from qgc4qgis.processing.alg_export_plan import ExportPlanAlgorithm
 from qgc4qgis.processing.alg_photo_centers import PhotoCentersAlgorithm
 from qgc4qgis.processing.alg_survey_grid import SurveyGridAlgorithm
@@ -27,4 +29,6 @@ class Qgc4QgisProvider(QgsProcessingProvider):
         """Load all algorithms belonging to this provider."""
         self.addAlgorithm(SurveyGridAlgorithm())
         self.addAlgorithm(ExportPlanAlgorithm())
+        self.addAlgorithm(ExportLitchiAlgorithm())
+        self.addAlgorithm(ExportDjiAlgorithm())
         self.addAlgorithm(PhotoCentersAlgorithm())

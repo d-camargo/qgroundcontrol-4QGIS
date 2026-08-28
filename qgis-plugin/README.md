@@ -117,3 +117,41 @@ $$\text{GSD} = \frac{\text{Altura de Voo (m)} \times \text{Largura do Sensor (mm
 $$\text{Altura de Voo (m)} = \frac{\text{GSD (cm/px)} \times \text{Distância Focal (mm)} \times \text{Largura da Imagem (px)}}{\text{Largura do Sensor (mm)} \times 100}$$
 
 - **Consequência**: A dimensão vertical do sensor (`sensorHeight`) e a altura da imagem em pixels (`imageHeight`) não afetam o cálculo escalar do GSD nem a altura de voo gerada, sendo utilizadas apenas para determinar a extensão das pegadas (*footprints*) e a distância de disparo frontal de fotos.
+
+---
+
+## 5. Exportar para Litchi e DJI Fly
+
+Além do formato nativo `.plan` do QGroundControl, o QGC4QGIS permite exportar missões para os aplicativos **Litchi** (formato `.csv`) e **DJI Fly** (formato WPML `.kmz`).
+
+### 1. Exportação e Carga no Litchi
+1. **Passos de Carga**:
+   - Acesse o **Litchi Mission Hub** (`flylitchi.com/hub`) ou abra o aplicativo móvel Litchi.
+   - Acesse a opção **Mission Hub → Import** e selecione o arquivo `.csv` exportado pelo plugin.
+   - Clique em **Salvar** (*Save*) para sincronizar a missão importada com sua conta e dispositivos.
+2. **Três Ajustes Globais Manuais Exigidos (Formato D8)**:
+   Ao importar uma missão em CSV no Litchi Mission Hub, três parâmetros globais precisam ser definidos manualmente no painel antes de salvar:
+   - **Heading Mode** (Modo de Direção/Proa): escolher o comportamento da proa. Com **"Custom (WP)"** o aplicativo passa a usar o `heading(deg)` gravado no CSV (o azimute de cada transect).
+   - **Finish Action** (Ação ao Finalizar): definir a ação executada ao término da rota (ex.: *Return to Home (RTH)*, *None* ou *Land*).
+   - **Path Mode** (Modo de Trajetória): marcar **"Straight Lines"** (linhas retas) — o CSV é gerado com `curvesize=0` e não representa curvas.
+
+### 2. Exportação e Carga no DJI Fly
+1. **Passos de Carga**:
+   - No aplicativo **DJI Fly** (ou no controle DJI RC / RC 2 / RC Pro), crie e salve uma missão de teste de **1 waypoint** para que o aplicativo crie a estrutura de arquivos e um identificador único (GUID).
+   - Localize a pasta do GUID criada no armazenamento do dispositivo:
+     - **Android**: `Android/data/dji.go.v5/files/waypoint`
+     - **iOS / Armazenamento do Controle**: `Files/DJI Fly/wayline_mission/`
+   - Renomeie o arquivo `.kmz` exportado pelo QGC4QGIS com o mesmo nome GUID da pasta.
+   - Substitua o arquivo `.kmz` original localizado dentro da pasta GUID do dispositivo pelo arquivo renomeado gerado pelo plugin.
+2. **Aviso de Não Reeditar no DJI Fly**:
+   > [!WARNING]
+   > **Não edite ou salve a missão importada dentro do DJI Fly!**  
+   > Se a missão for reeditada no aplicativo DJI Fly, o app reescreverá a estrutura do arquivo WPML `.kmz`, podendo corromper ou remover os gatilhos de captura de foto por distância/tempo e ações customizadas nos waypoints.
+
+### 3. Limitações dos Aplicativos
+- **Limite de Waypoints**:
+  - **Litchi**: limite máximo de **99 waypoints** por missão; o plugin avisa quando a missão passa desse limite.
+  - **DJI Fly**: o teto de waypoints não é documentado publicamente pela DJI; o valor citado pela comunidade é **200**, e o plugin avisa quando a missão passa dele.
+- **Modo Terreno Indisponível no DJI Fly**:
+  - O WPML só aceita altura relativa ao ponto de decolagem, altura elipsoidal (WGS84) ou seguimento de terreno em tempo real. O DEM usado pelo plugin é ortométrico (MSL) e a conversão para altura elipsoidal exigiria a ondulação geoidal, que o plugin não tem. Por isso o exportador DJI **recusa** a exportação em modo terreno com mensagem explícita. No Litchi o modo terreno é exportado normalmente (`altitudemode=1`, MSL).
+

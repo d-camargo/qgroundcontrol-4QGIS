@@ -3,7 +3,10 @@
 from typing import Any
 
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
     QgsMapLayerProxyModel,
+    QgsProcessingException,
     QgsProcessingFeatureSourceDefinition,
     QgsProject,
     QgsRasterLayer,
@@ -31,6 +34,7 @@ from qgis.PyQt.QtWidgets import (
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
+from qgc4qgis.core.route import route_from_transects
 from qgc4qgis.core.settings import load_project_settings, save_project_settings
 from qgc4qgis.core.stats import calculate_flight_stats, calculate_polygon_area
 from qgc4qgis.gui.preview import FlightPreviewManager
@@ -41,6 +45,8 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
     gridGenerated = pyqtSignal(dict)
     planExported = pyqtSignal(dict)
+    litchiExported = pyqtSignal(dict)
+    djiExported = pyqtSignal(dict)
 
     def __init__(self, parent: QWidget | None = None):
         """Constructor for QgcPlanningDockWidget."""
@@ -261,6 +267,15 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.lbl_stat_interval = QLabel("-", grp_stats)
         lay_stats.addRow("Intervalo entre fotos:", self.lbl_stat_interval)
 
+        self.lbl_stat_wp_qgc = QLabel("-", grp_stats)
+        lay_stats.addRow("Waypoints QGC:", self.lbl_stat_wp_qgc)
+
+        self.lbl_stat_wp_litchi = QLabel("-", grp_stats)
+        lay_stats.addRow("Waypoints Litchi:", self.lbl_stat_wp_litchi)
+
+        self.lbl_stat_wp_dji = QLabel("-", grp_stats)
+        lay_stats.addRow("Waypoints DJI:", self.lbl_stat_wp_dji)
+
         self.lbl_stat_warning = QLabel("", grp_stats)
         self.lbl_stat_warning.setStyleSheet("color: red; font-weight: bold;")
         self.lbl_stat_warning.setWordWrap(True)
@@ -269,7 +284,50 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         main_layout.addWidget(grp_stats)
 
-        # 7. Botões de Ação
+        # 7. Exportar para
+        grp_export = QGroupBox("Exportar para", main_widget)
+        lay_export = QFormLayout(grp_export)
+
+        self.cmb_trigger_mode = QComboBox(grp_export)
+        self.cmb_trigger_mode.addItems(["Por distância", "Por tempo", "Por foto"])
+        self.cmb_trigger_mode.currentIndexChanged.connect(self._on_grid_param_changed)
+        lay_export.addRow("Modo de disparo:", self.cmb_trigger_mode)
+
+        self.spn_speed = QDoubleSpinBox(grp_export)
+        self.spn_speed.setRange(0.1, 100.0)
+        self.spn_speed.setValue(5.0)
+        self.spn_speed.setSuffix(" m/s")
+        self.spn_speed.setDecimals(1)
+        self.spn_speed.valueChanged.connect(self._on_grid_param_changed)
+        lay_export.addRow("Velocidade de voo:", self.spn_speed)
+
+        self.spn_gimbal_pitch = QDoubleSpinBox(grp_export)
+        self.spn_gimbal_pitch.setRange(-90.0, 20.0)
+        self.spn_gimbal_pitch.setValue(-90.0)
+        self.spn_gimbal_pitch.setSuffix("°")
+        self.spn_gimbal_pitch.setDecimals(1)
+        self.spn_gimbal_pitch.valueChanged.connect(self._on_grid_param_changed)
+        lay_export.addRow("Ângulo de gimbal:", self.spn_gimbal_pitch)
+
+        self.spn_waypoint_wait = QDoubleSpinBox(grp_export)
+        self.spn_waypoint_wait.setRange(0.0, 3600.0)
+        self.spn_waypoint_wait.setValue(0.0)
+        self.spn_waypoint_wait.setSuffix(" s")
+        self.spn_waypoint_wait.setDecimals(1)
+        self.spn_waypoint_wait.valueChanged.connect(self._on_grid_param_changed)
+        lay_export.addRow("Espera no waypoint:", self.spn_waypoint_wait)
+
+        self.btn_export_litchi = QPushButton("Exportar Litchi (.csv)…", grp_export)
+        self.btn_export_litchi.clicked.connect(self.export_litchi)
+        lay_export.addRow(self.btn_export_litchi)
+
+        self.btn_export_dji = QPushButton("Exportar DJI Fly (.kmz)…", grp_export)
+        self.btn_export_dji.clicked.connect(self.export_dji)
+        lay_export.addRow(self.btn_export_dji)
+
+        main_layout.addWidget(grp_export)
+
+        # 8. Botões de Ação
         self.btn_generate = QPushButton("Gerar Grade de Voo", main_widget)
         self.btn_generate.clicked.connect(self.generate_grid)
         main_layout.addWidget(self.btn_generate)
@@ -478,6 +536,14 @@ class QgcPlanningDockWidget(QgsDockWidget):
                     self.cmb_elevation_layer.setLayer(elev_layer)
 
             self.spn_tolerance.setValue(settings.get("TOLERANCE", 10.0))
+
+            trig_mode = settings.get("TRIGGER_MODE", 0)
+            if 0 <= trig_mode < self.cmb_trigger_mode.count():
+                self.cmb_trigger_mode.setCurrentIndex(trig_mode)
+
+            self.spn_speed.setValue(settings.get("SPEED", 5.0))
+            self.spn_gimbal_pitch.setValue(settings.get("GIMBAL_PITCH", -90.0))
+            self.spn_waypoint_wait.setValue(settings.get("WAYPOINT_WAIT", 0.0))
         finally:
             self._updating_lock = False
 
@@ -509,6 +575,9 @@ class QgcPlanningDockWidget(QgsDockWidget):
             self.lbl_stat_photos.setText("-")
             self.lbl_stat_time.setText("-")
             self.lbl_stat_interval.setText("-")
+            self.lbl_stat_wp_qgc.setText("-")
+            self.lbl_stat_wp_litchi.setText("-")
+            self.lbl_stat_wp_dji.setText("-")
             self.lbl_stat_warning.setText("")
             self.lbl_stat_warning.setVisible(False)
             return
@@ -614,8 +683,78 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         self.lbl_stat_interval.setText(f"{stats.time_between_shots:.2f} s")
 
+        trig_mode_idx = self.cmb_trigger_mode.currentIndex()
+        trig_mode_map = {0: "POR_DISTANCIA", 1: "POR_TEMPO", 2: "POR_FOTO"}
+        trig_mode_str = trig_mode_map.get(trig_mode_idx, "POR_DISTANCIA")
+        speed = self.spn_speed.value()
+
+        if trig_mode_str == "POR_TEMPO":
+            route_trig_dist = (
+                self.camera_calc.trigger_distance / speed
+                if (self.camera_calc and speed > 0.0)
+                else 0.0
+            )
+        else:
+            route_trig_dist = self.camera_calc.trigger_distance if self.camera_calc else 0.0
+
+        if is_geodetic:
+            route_transects = transects
+        else:
+            to_wgs84 = QgsCoordinateTransform(
+                line_layer.crs(),
+                QgsCoordinateReferenceSystem("EPSG:4326"),
+                QgsProject.instance(),
+            )
+            route_transects = []
+            for tr in transects:
+                pts = []
+                for x, y in tr:
+                    projected = to_wgs84.transform(x, y)
+                    pts.append((projected.y(), projected.x()))
+                route_transects.append(pts)
+
+        route = route_from_transects(
+            route_transects,
+            altitude=self.spn_altitude.value(),
+            trigger_distance=route_trig_dist,
+            trigger_mode=trig_mode_str,
+            flight_speed=speed,
+            gimbal_pitch=self.spn_gimbal_pitch.value(),
+            max_waypoints=0,
+        )
+        wp_count = len(route.waypoints)
+
+        route_qgc = route_from_transects(
+            route_transects,
+            altitude=self.spn_altitude.value(),
+            trigger_distance=route_trig_dist,
+            trigger_mode="POR_DISTANCIA",
+            flight_speed=speed,
+            gimbal_pitch=self.spn_gimbal_pitch.value(),
+            max_waypoints=0,
+        )
+        self.lbl_stat_wp_qgc.setText(str(len(route_qgc.waypoints)))
+
+        if wp_count > 99:
+            self.lbl_stat_wp_litchi.setText(f"{wp_count} (excede limite: 99)")
+        else:
+            self.lbl_stat_wp_litchi.setText(str(wp_count))
+
+        if wp_count > 200:
+            self.lbl_stat_wp_dji.setText(f"{wp_count} (excede limite: 200)")
+        else:
+            self.lbl_stat_wp_dji.setText(str(wp_count))
+
+        warnings: list[str] = []
         if stats.is_interval_too_short and stats.warning_message:
-            self.lbl_stat_warning.setText(stats.warning_message)
+            warnings.append(stats.warning_message)
+        if wp_count > 99:
+            warnings.append(f"Número de waypoints ({wp_count}) excede o limite do Litchi (99).")
+        if wp_count > 200:
+            warnings.append(f"Número de waypoints ({wp_count}) excede o limite do DJI (200).")
+
+        if warnings:
+            self.lbl_stat_warning.setText("\n".join(warnings))
             self.lbl_stat_warning.setVisible(True)
         else:
             self.lbl_stat_warning.setText("")
@@ -660,6 +799,10 @@ class QgcPlanningDockWidget(QgsDockWidget):
             "IMAGE_WIDTH": self.spn_img_w.value(),
             "IMAGE_HEIGHT": self.spn_img_h.value(),
             "FOCAL_LENGTH": self.spn_focal.value(),
+            "TRIGGER_MODE": self.cmb_trigger_mode.currentIndex(),
+            "SPEED": self.spn_speed.value(),
+            "GIMBAL_PITCH": self.spn_gimbal_pitch.value(),
+            "WAYPOINT_WAIT": self.spn_waypoint_wait.value(),
         }
 
     def generate_grid(self) -> None:
@@ -733,6 +876,100 @@ class QgcPlanningDockWidget(QgsDockWidget):
             processing.run("qgc4qgis:exportar_plano_qgc", proc_params)
         except Exception:
             # Standalone test or headless fallback
+            pass
+
+        return file_path
+
+    def export_litchi(self, file_path: str | None = None) -> str | None:
+        """Export flight plan to a Litchi (.csv) mission file via ExportLitchiAlgorithm."""
+        params = self.get_parameters()
+        layer = params.get("INPUT")
+
+        if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
+            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            return None
+
+        if not file_path:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Exportar Litchi CSV",
+                "",
+                "Litchi Mission (*.csv);;Todos os Arquivos (*)",
+            )
+
+        if not file_path:
+            return None
+
+        proc_params = dict(params)
+        feat_id = proc_params.pop("FEATURE_ID", None)
+
+        if feat_id is not None:
+            layer.selectByIds([feat_id])
+            proc_params["INPUT"] = QgsProcessingFeatureSourceDefinition(
+                layer.id(), selectedFeaturesOnly=True
+            )
+        else:
+            proc_params["INPUT"] = layer
+
+        proc_params["OUTPUT"] = file_path
+        self.litchiExported.emit(proc_params)
+
+        try:
+            import processing
+
+            processing.run("qgc4qgis:exportar_litchi_csv", proc_params)
+        except QgsProcessingException as e:
+            if self.isVisible():
+                QMessageBox.critical(self, "Erro na exportação Litchi", str(e))
+        except Exception:
+            # Headless/standalone: processing framework unavailable
+            pass
+
+        return file_path
+
+    def export_dji(self, file_path: str | None = None) -> str | None:
+        """Export flight plan to a DJI Fly (.kmz) mission file via ExportDjiAlgorithm."""
+        params = self.get_parameters()
+        layer = params.get("INPUT")
+
+        if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
+            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            return None
+
+        if not file_path:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Exportar DJI Fly KMZ",
+                "",
+                "DJI Fly Mission (*.kmz);;Todos os Arquivos (*)",
+            )
+
+        if not file_path:
+            return None
+
+        proc_params = dict(params)
+        feat_id = proc_params.pop("FEATURE_ID", None)
+
+        if feat_id is not None:
+            layer.selectByIds([feat_id])
+            proc_params["INPUT"] = QgsProcessingFeatureSourceDefinition(
+                layer.id(), selectedFeaturesOnly=True
+            )
+        else:
+            proc_params["INPUT"] = layer
+
+        proc_params["OUTPUT"] = file_path
+        self.djiExported.emit(proc_params)
+
+        try:
+            import processing
+
+            processing.run("qgc4qgis:exportar_dji_kmz", proc_params)
+        except QgsProcessingException as e:
+            if self.isVisible():
+                QMessageBox.critical(self, "Erro na exportação DJI", str(e))
+        except Exception:
+            # Headless/standalone: processing framework unavailable
             pass
 
         return file_path

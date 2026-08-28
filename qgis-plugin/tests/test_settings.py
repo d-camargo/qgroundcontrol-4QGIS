@@ -72,6 +72,10 @@ def test_save_and_load_settings_round_trip(qgis_app):
         "IMAGE_WIDTH": 6000,
         "IMAGE_HEIGHT": 4000,
         "FOCAL_LENGTH": 50.0,
+        "TRIGGER_MODE": 1,
+        "SPEED": 7.5,
+        "GIMBAL_PITCH": -45.0,
+        "WAYPOINT_WAIT": 2.5,
     }
 
     save_project_settings(params_to_save, project)
@@ -94,6 +98,10 @@ def test_save_and_load_settings_round_trip(qgis_app):
     assert loaded["IMAGE_WIDTH"] == 6000
     assert loaded["IMAGE_HEIGHT"] == 4000
     assert loaded["FOCAL_LENGTH"] == 50.0
+    assert loaded["TRIGGER_MODE"] == 1
+    assert loaded["SPEED"] == 7.5
+    assert loaded["GIMBAL_PITCH"] == -45.0
+    assert loaded["WAYPOINT_WAIT"] == 2.5
 
 
 def test_save_and_load_none_feature_id(qgis_app):

@@ -27,6 +27,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "IMAGE_HEIGHT": 5304,
     "FOCAL_LENGTH": 35.0,
     "TOLERANCE": 10.0,
+    "TRIGGER_MODE": 0,
+    "SPEED": 5.0,
+    "GIMBAL_PITCH": -90.0,
+    "WAYPOINT_WAIT": 0.0,
 }
 
 
@@ -83,6 +87,11 @@ def save_project_settings(params: dict[str, Any], project: QgsProject | None = N
         "IMAGE_HEIGHT",
         int(params.get("IMAGE_HEIGHT", DEFAULT_SETTINGS["IMAGE_HEIGHT"])),
     )
+    project.writeEntry(
+        PROJECT_SCOPE,
+        "TRIGGER_MODE",
+        int(params.get("TRIGGER_MODE", DEFAULT_SETTINGS["TRIGGER_MODE"])),
+    )
 
     # Double entries
     project.writeEntryDouble(
@@ -129,6 +138,19 @@ def save_project_settings(params: dict[str, Any], project: QgsProject | None = N
             params.get("TOLERANCE", params.get("TERRAIN_TOLERANCE", DEFAULT_SETTINGS["TOLERANCE"]))
         ),
     )
+    project.writeEntryDouble(
+        PROJECT_SCOPE, "SPEED", float(params.get("SPEED", DEFAULT_SETTINGS["SPEED"]))
+    )
+    project.writeEntryDouble(
+        PROJECT_SCOPE,
+        "GIMBAL_PITCH",
+        float(params.get("GIMBAL_PITCH", DEFAULT_SETTINGS["GIMBAL_PITCH"])),
+    )
+    project.writeEntryDouble(
+        PROJECT_SCOPE,
+        "WAYPOINT_WAIT",
+        float(params.get("WAYPOINT_WAIT", DEFAULT_SETTINGS["WAYPOINT_WAIT"])),
+    )
 
     # Bool entries
     project.writeEntryBool(
@@ -163,6 +185,9 @@ def load_project_settings(project: QgsProject | None = None) -> dict[str, Any]:
     )
     img_w, _ = project.readNumEntry(PROJECT_SCOPE, "IMAGE_WIDTH", DEFAULT_SETTINGS["IMAGE_WIDTH"])
     img_h, _ = project.readNumEntry(PROJECT_SCOPE, "IMAGE_HEIGHT", DEFAULT_SETTINGS["IMAGE_HEIGHT"])
+    trig_mode, _ = project.readNumEntry(
+        PROJECT_SCOPE, "TRIGGER_MODE", DEFAULT_SETTINGS["TRIGGER_MODE"]
+    )
 
     alt, _ = project.readDoubleEntry(PROJECT_SCOPE, "ALTITUDE", DEFAULT_SETTINGS["ALTITUDE"])
     gsd, _ = project.readDoubleEntry(PROJECT_SCOPE, "GSD", DEFAULT_SETTINGS["GSD"])
@@ -187,6 +212,13 @@ def load_project_settings(project: QgsProject | None = None) -> dict[str, Any]:
     )
     tolerance, _ = project.readDoubleEntry(
         PROJECT_SCOPE, "TOLERANCE", DEFAULT_SETTINGS["TOLERANCE"]
+    )
+    speed, _ = project.readDoubleEntry(PROJECT_SCOPE, "SPEED", DEFAULT_SETTINGS["SPEED"])
+    gimbal_pitch, _ = project.readDoubleEntry(
+        PROJECT_SCOPE, "GIMBAL_PITCH", DEFAULT_SETTINGS["GIMBAL_PITCH"]
+    )
+    wp_wait, _ = project.readDoubleEntry(
+        PROJECT_SCOPE, "WAYPOINT_WAIT", DEFAULT_SETTINGS["WAYPOINT_WAIT"]
     )
 
     mode_alt, _ = project.readBoolEntry(
@@ -214,6 +246,10 @@ def load_project_settings(project: QgsProject | None = None) -> dict[str, Any]:
         "IMAGE_HEIGHT": img_h,
         "FOCAL_LENGTH": focal,
         "TOLERANCE": tolerance,
+        "TRIGGER_MODE": trig_mode,
+        "SPEED": speed,
+        "GIMBAL_PITCH": gimbal_pitch,
+        "WAYPOINT_WAIT": wp_wait,
     }
 
 

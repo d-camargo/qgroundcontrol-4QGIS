@@ -229,9 +229,87 @@ def test_dock_flight_statistics_update(qgis_app):
     assert dock.lbl_stat_photos.text() != "-"
     assert int(dock.lbl_stat_photos.text()) > 0
     assert dock.lbl_stat_time.text() != "-"
+    assert dock.lbl_stat_wp_qgc.text() != "-"
+    assert dock.lbl_stat_wp_litchi.text() != "-"
+    assert dock.lbl_stat_wp_dji.text() != "-"
 
     old_photos = dock.lbl_stat_photos.text()
     dock.spn_overlap_frontal.setValue(85.0)
     assert dock.lbl_stat_photos.text() != old_photos
+
+    QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_waypoint_statistics_and_limits(qgis_app):
+    """Test waypoint counts display per destination and warnings when exceeding Litchi (99) or DJI (200) limits (Step 55)."""
+    from qgis.core import QgsProject
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(layer)
+    dock._on_layer_changed()
+
+    assert dock.lbl_stat_wp_qgc.text().isdigit()
+    assert dock.lbl_stat_wp_litchi.text().isdigit()
+    assert dock.lbl_stat_wp_dji.text().isdigit()
+
+    # High overlap to generate many transects/waypoints exceeding limits
+    dock.spn_overlap_side.setValue(98.0)
+    dock.spn_overlap_frontal.setValue(98.0)
+
+    wp_qgc = int(dock.lbl_stat_wp_qgc.text())
+    assert wp_qgc > 99
+
+    assert "excede limite: 99" in dock.lbl_stat_wp_litchi.text()
+    assert "Litchi (99)" in dock.lbl_stat_warning.text()
+    assert not dock.lbl_stat_warning.isHidden()
+
+    QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
+    """Test 'Exportar para' panel controls, parameters, and export buttons (Step 54)."""
+    from qgis.core import QgsProject
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    dock = QgcPlanningDockWidget()
+    assert dock.cmb_trigger_mode.count() == 3
+    assert dock.spn_speed.value() == 5.0
+    assert dock.spn_gimbal_pitch.value() == -90.0
+    assert dock.spn_waypoint_wait.value() == 0.0
+    assert dock.btn_export_litchi.text() == "Exportar Litchi (.csv)…"
+    assert dock.btn_export_dji.text() == "Exportar DJI Fly (.kmz)…"
+
+    dock.cmb_layer.setLayer(layer)
+    dock.cmb_trigger_mode.setCurrentIndex(1)
+    dock.spn_speed.setValue(8.0)
+    dock.spn_gimbal_pitch.setValue(-45.0)
+    dock.spn_waypoint_wait.setValue(2.5)
+
+    params = dock.get_parameters()
+    assert params["TRIGGER_MODE"] == 1
+    assert params["SPEED"] == 8.0
+    assert params["GIMBAL_PITCH"] == -45.0
+    assert params["WAYPOINT_WAIT"] == 2.5
+
+    litchi_signals = []
+    dock.litchiExported.connect(lambda p: litchi_signals.append(p))
+    out_csv = str(tmp_path / "test_litchi.csv")
+    res_csv = dock.export_litchi(file_path=out_csv)
+    assert res_csv == out_csv
+    assert len(litchi_signals) == 1
+    assert litchi_signals[0]["SPEED"] == 8.0
+
+    dji_signals = []
+    dock.djiExported.connect(lambda p: dji_signals.append(p))
+    out_kmz = str(tmp_path / "test_dji.kmz")
+    res_kmz = dock.export_dji(file_path=out_kmz)
+    assert res_kmz == out_kmz
+    assert len(dji_signals) == 1
+    assert dji_signals[0]["GIMBAL_PITCH"] == -45.0
 
     QgsProject.instance().removeMapLayer(layer)

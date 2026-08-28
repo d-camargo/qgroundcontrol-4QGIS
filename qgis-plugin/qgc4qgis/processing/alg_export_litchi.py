@@ -1,51 +1,33 @@
-"""Processing algorithm to generate photo centers and oriented footprint polygons from flight transects or polygon layers."""
+"""Processing algorithm to export a Litchi mission (.csv) file."""
 
 from qgis.core import (
-    Qgis,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
-    QgsFeature,
-    QgsFeatureSink,
-    QgsField,
-    QgsFields,
     QgsGeometry,
-    QgsPointXY,
     QgsProcessing,
     QgsProcessingAlgorithm,
     QgsProcessingException,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
-    QgsProcessingParameterFeatureSink,
     QgsProcessingParameterFeatureSource,
+    QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
+    QgsProcessingParameterRasterLayer,
 )
-from qgis.PyQt.QtCore import QVariant
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
 from qgc4qgis.core.geo import AEQDProjection
-from qgc4qgis.core.route import sample_photo_centers
+from qgc4qgis.core.litchi import save_litchi_csv
+from qgc4qgis.core.missionitems import DistanceMode
+from qgc4qgis.core.route import route_from_transects
 from qgc4qgis.core.survey import generate_survey_transects
+from qgc4qgis.core.terrain import adjust_terrain_flight_path
 from qgc4qgis.processing.alg_survey_grid import extract_polygons
 
 
-def extract_lines(geom: QgsGeometry) -> list[list[tuple[float, float]]]:
-    """Extract line vertices (lat, lon) for each line in a linestring or multilinestring geometry."""
-    lines: list[list[tuple[float, float]]] = []
-    if geom.isMultipart():
-        multi = geom.asMultiPolyline()
-        for line in multi:
-            if line:
-                lines.append([(float(p.y()), float(p.x())) for p in line])
-    else:
-        line = geom.asPolyline()
-        if line:
-            lines.append([(float(p.y()), float(p.x())) for p in line])
-    return lines
-
-
-class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
-    """QGIS Processing Algorithm to generate photo centers and footprint polygons."""
+class ExportLitchiAlgorithm(QgsProcessingAlgorithm):
+    """QGIS Processing Algorithm to export Litchi mission (.csv) files."""
 
     INPUT = "INPUT"
     CAMERA = "CAMERA"
@@ -62,16 +44,21 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
     IMAGE_WIDTH = "IMAGE_WIDTH"
     IMAGE_HEIGHT = "IMAGE_HEIGHT"
     FOCAL_LENGTH = "FOCAL_LENGTH"
-    OUTPUT_CENTERS = "OUTPUT_CENTERS"
-    OUTPUT_FOOTPRINTS = "OUTPUT_FOOTPRINTS"
+    TRIGGER_MODE = "TRIGGER_MODE"
+    SPEED = "SPEED"
+    GIMBAL_PITCH = "GIMBAL_PITCH"
+    WAYPOINT_WAIT = "WAYPOINT_WAIT"
+    ELEVATION_LAYER = "ELEVATION_LAYER"
+    TOLERANCE = "TOLERANCE"
+    OUTPUT = "OUTPUT"
 
     def name(self) -> str:
         """Return unique algorithm name."""
-        return "gerar_centros_foto"
+        return "exportar_litchi_csv"
 
     def displayName(self) -> str:
         """Return localized human-readable algorithm name."""
-        return "Gerar centros de foto e pegadas"
+        return "Exportar missão Litchi (.csv)"
 
     def group(self) -> str:
         """Return localized group name."""
@@ -81,15 +68,15 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
         """Return unique group identifier."""
         return "planejamento_voo"
 
-    def createInstance(self) -> "PhotoCentersAlgorithm":
+    def createInstance(self) -> "ExportLitchiAlgorithm":
         """Create new instance of algorithm."""
-        return PhotoCentersAlgorithm()
+        return ExportLitchiAlgorithm()
 
     def shortHelpString(self) -> str:
         """Return short help text for algorithm GUI."""
         return (
-            "Gera camadas de pontos de centros de tomada de foto e polígonos de pegadas (footprints) "
-            "orientados pelo azimute dos transectos de voo."
+            "Exporta uma missão de voo no formato Litchi (.csv) "
+            "a partir de polígonos de cobertura ou linhas de grade de voo."
         )
 
     def initAlgorithm(self, config=None) -> None:
@@ -250,26 +237,81 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT_CENTERS,
-                "Centros de foto (Pontos)",
-                QgsProcessing.TypeVectorPoint,
+            QgsProcessingParameterEnum(
+                self.TRIGGER_MODE,
+                "Modo de disparo",
+                options=["Por distância", "Por tempo", "Por foto"],
+                defaultValue=0,
             )
         )
 
         self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT_FOOTPRINTS,
-                "Pegadas de foto (Polígonos)",
-                QgsProcessing.TypeVectorPolygon,
+            QgsProcessingParameterNumber(
+                self.SPEED,
+                "Velocidade (m/s)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=5.0,
+                minValue=0.1,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.GIMBAL_PITCH,
+                "Ângulo de gimbal (graus)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=-90.0,
+                minValue=-90.0,
+                maxValue=20.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.WAYPOINT_WAIT,
+                "Espera no waypoint (s)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=0.0,
+                minValue=0.0,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterRasterLayer(
+                self.ELEVATION_LAYER,
+                "Camada de elevação (DEM) — se definida, exporta em modo acima do terreno",
+                optional=True,
+                defaultValue=None,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.TOLERANCE,
+                "Tolerância do terreno (m)",
+                QgsProcessingParameterNumber.Double,
+                defaultValue=10.0,
+                minValue=0.1,
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterFileDestination(
+                self.OUTPUT,
+                "Arquivo de destino (.csv)",
+                fileFilter="Litchi CSV (*.csv)",
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        """Execute photo centers and footprint polygon generation algorithm logic."""
+        """Execute Litchi CSV export algorithm logic."""
         source = self.parameterAsSource(parameters, self.INPUT, context)
         if source is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
+
+        output_file = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
+        if not output_file:
+            raise QgsProcessingException("Caminho do arquivo de saída não especificado.")
 
         camera_idx = self.parameterAsEnum(parameters, self.CAMERA, context)
         cameras = load_cameras()
@@ -302,6 +344,19 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
         entry_loc = self.parameterAsEnum(parameters, self.ENTRY_LOCATION, context)
         refly = self.parameterAsBool(parameters, self.REFLY, context)
 
+        trigger_mode_idx = self.parameterAsEnum(parameters, self.TRIGGER_MODE, context)
+        trigger_mode_map = {0: "POR_DISTANCIA", 1: "POR_TEMPO", 2: "POR_FOTO"}
+        trigger_mode_str = trigger_mode_map.get(trigger_mode_idx, "POR_DISTANCIA")
+
+        speed = self.parameterAsDouble(parameters, self.SPEED, context)
+        gimbal_pitch = self.parameterAsDouble(parameters, self.GIMBAL_PITCH, context)
+        waypoint_wait = self.parameterAsDouble(parameters, self.WAYPOINT_WAIT, context)
+
+        elevation_layer = self.parameterAsRasterLayer(parameters, self.ELEVATION_LAYER, context)
+        terrain_mode = elevation_layer is not None and elevation_layer.isValid()
+        tolerance = self.parameterAsDouble(parameters, self.TOLERANCE, context)
+        distance_mode = DistanceMode.CALC_ABOVE_TERRAIN if terrain_mode else DistanceMode.RELATIVE
+
         value_set_is_distance = gsd <= 0.0
         calc = CameraCalc(
             spec=spec,
@@ -315,72 +370,17 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
         if not calc.recalculate():
             raise QgsProcessingException("Falha ao calcular os parâmetros da câmera/voo.")
 
-        center_fields = QgsFields()
-        center_fields.append(QgsField("id", QVariant.Int))
-        center_fields.append(QgsField("transect_id", QVariant.Int))
-        center_fields.append(QgsField("photo_id", QVariant.Int))
-        center_fields.append(QgsField("lat", QVariant.Double))
-        center_fields.append(QgsField("lon", QVariant.Double))
-        center_fields.append(QgsField("altitude_m", QVariant.Double))
-        center_fields.append(QgsField("azimuth_deg", QVariant.Double))
-        center_fields.append(QgsField("gsd_cm", QVariant.Double))
-        center_fields.append(QgsField("camera", QVariant.String))
-
-        footprint_fields = QgsFields()
-        footprint_fields.append(QgsField("id", QVariant.Int))
-        footprint_fields.append(QgsField("transect_id", QVariant.Int))
-        footprint_fields.append(QgsField("photo_id", QVariant.Int))
-        footprint_fields.append(QgsField("altitude_m", QVariant.Double))
-        footprint_fields.append(QgsField("azimuth_deg", QVariant.Double))
-        footprint_fields.append(QgsField("area_m2", QVariant.Double))
-        footprint_fields.append(QgsField("gsd_cm", QVariant.Double))
-        footprint_fields.append(QgsField("camera", QVariant.String))
-
-        centers_param_key = (
-            self.OUTPUT_CENTERS
-            if self.OUTPUT_CENTERS in parameters
-            else ("OUTPUT" if "OUTPUT" in parameters else self.OUTPUT_CENTERS)
-        )
-
-        (centers_sink, dest_centers_id) = self.parameterAsSink(
-            parameters,
-            centers_param_key,
-            context,
-            center_fields,
-            Qgis.WkbType.Point,
-            source.sourceCrs(),
-        )
-        if centers_sink is None:
-            raise QgsProcessingException(self.invalidSinkError(parameters, centers_param_key))
-
-        (footprints_sink, dest_footprints_id) = self.parameterAsSink(
-            parameters,
-            self.OUTPUT_FOOTPRINTS,
-            context,
-            footprint_fields,
-            Qgis.WkbType.Polygon,
-            source.sourceCrs(),
-        )
-        if footprints_sink is None:
-            raise QgsProcessingException(self.invalidSinkError(parameters, self.OUTPUT_FOOTPRINTS))
-
         crs_wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         source_crs = source.sourceCrs()
         need_transform = source_crs != crs_wgs84
         if need_transform:
             to_wgs84 = QgsCoordinateTransform(source_crs, crs_wgs84, context.transformContext())
-            to_source = QgsCoordinateTransform(crs_wgs84, source_crs, context.transformContext())
+
+        all_transects = []
 
         feature_count = source.featureCount()
         total_steps = feature_count if feature_count > 0 else 100
         step = 0
-        global_photo_id = 1
-        transect_id = 1
-
-        trig_dist = calc.trigger_distance
-        fp_side = calc.image_footprint_side
-        fp_frontal = calc.image_footprint_frontal
-        fp_area = fp_side * fp_frontal
 
         for feature in source.getFeatures():
             if feedback.isCanceled():
@@ -394,19 +394,19 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             if need_transform:
                 geom_wgs84.transform(to_wgs84)
 
-            geom_type = geom_wgs84.type()
+            is_polygon = QgsGeometry.type(geom_wgs84) == 2  # Polygon geometry type
 
-            transects_list: list[list[tuple[float, float]]] = []
-
-            if geom_type == Qgis.GeometryType.Polygon:
+            if is_polygon:
                 polygons = extract_polygons(geom_wgs84)
                 for polygon_pts in polygons:
                     if len(polygon_pts) < 3:
                         continue
+
                     ref_lat, ref_lon = polygon_pts[0]
                     proj = AEQDProjection(ref_lat, ref_lon)
                     planar_pts = [proj.forward(lat, lon) for lat, lon in polygon_pts]
-                    generated_transects = generate_survey_transects(
+
+                    transects = generate_survey_transects(
                         polygon_points=planar_pts,
                         grid_angle=grid_angle,
                         grid_spacing=calc.adjusted_footprint_side,
@@ -414,75 +414,80 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
                         turnaround_distance=turnaround,
                         refly_90_degrees=refly,
                     )
-                    for tr in generated_transects:
-                        geo_pts = [proj.inverse(x, y) for x, y in tr]
-                        transects_list.append(geo_pts)
-            elif geom_type == Qgis.GeometryType.Line:
-                lines = extract_lines(geom_wgs84)
-                transects_list.extend(lines)
 
-            for geo_pts in transects_list:
-                if feedback.isCanceled():
-                    break
+                    geo_transects = [[proj.inverse(x, y) for x, y in tr] for tr in transects]
 
-                centers = sample_photo_centers(geo_pts, trig_dist)
-                for center in centers:
-                    pt_geom = QgsGeometry.fromPointXY(QgsPointXY(center.lon, center.lat))
-                    if need_transform:
-                        pt_geom.transform(to_source)
-
-                    c_feat = QgsFeature()
-                    c_feat.setGeometry(pt_geom)
-                    c_feat.setAttributes(
-                        [
-                            global_photo_id,
-                            transect_id,
-                            center.photo_in_transect_id,
-                            round(center.lat, 7),
-                            round(center.lon, 7),
-                            round(calc.distance_to_surface, 2),
-                            round(center.azimuth_deg, 1),
-                            round(calc.image_density, 2),
-                            spec.canonicalName,
+                    if terrain_mode:
+                        adjusted_transects = [
+                            adjust_terrain_flight_path(
+                                tr,
+                                raster_layer=elevation_layer,
+                                target_altitude=calc.distance_to_surface,
+                                step_distance=tolerance,
+                                tolerance=tolerance,
+                                transform_context=context.transformContext(),
+                            )
+                            for tr in geo_transects
                         ]
-                    )
-                    centers_sink.addFeature(c_feat, QgsFeatureSink.FastInsert)
-
-                    poly_pts = [
-                        QgsPointXY(c_lon, c_lat)
-                        for c_lat, c_lon in center.footprint_corners(fp_frontal, fp_side)
-                    ]
-                    if poly_pts:
-                        poly_pts.append(poly_pts[0])
-
-                    fp_geom = QgsGeometry.fromPolygonXY([poly_pts])
-                    if need_transform:
-                        fp_geom.transform(to_source)
-
-                    fp_feat = QgsFeature()
-                    fp_feat.setGeometry(fp_geom)
-                    fp_feat.setAttributes(
-                        [
-                            global_photo_id,
-                            transect_id,
-                            center.photo_in_transect_id,
-                            round(calc.distance_to_surface, 2),
-                            round(center.azimuth_deg, 1),
-                            round(fp_area, 2),
-                            round(calc.image_density, 2),
-                            spec.canonicalName,
+                        geo_transects = [
+                            [(p.lat, p.lon, p.altitude) for p in tr] for tr in adjusted_transects
                         ]
-                    )
-                    footprints_sink.addFeature(fp_feat, QgsFeatureSink.FastInsert)
 
-                    global_photo_id += 1
+                    all_transects.extend(geo_transects)
+            else:
+                # LineString geometry fallback
+                if geom_wgs84.isMultipart():
+                    lines = geom_wgs84.asMultiPolyline()
+                else:
+                    lines = [geom_wgs84.asPolyline()]
 
-                transect_id += 1
+                for line in lines:
+                    if not line:
+                        continue
+                    line_pts = [(pt.y(), pt.x()) for pt in line]
+                    if terrain_mode:
+                        adjusted = adjust_terrain_flight_path(
+                            line_pts,
+                            raster_layer=elevation_layer,
+                            target_altitude=calc.distance_to_surface,
+                            step_distance=tolerance,
+                            tolerance=tolerance,
+                            transform_context=context.transformContext(),
+                        )
+                        line_pts = [(p.lat, p.lon, p.altitude) for p in adjusted]
+                    all_transects.append(line_pts)
 
             step += 1
             feedback.setProgress(int(100.0 * step / total_steps))
 
-        return {
-            self.OUTPUT_CENTERS: dest_centers_id,
-            self.OUTPUT_FOOTPRINTS: dest_footprints_id,
-        }
+        if trigger_mode_str == "POR_TEMPO":
+            trig_dist = calc.trigger_distance / speed if speed > 0 else calc.trigger_distance
+        else:
+            trig_dist = calc.trigger_distance
+
+        route = route_from_transects(
+            all_transects,
+            altitude=calc.distance_to_surface,
+            trigger_distance=trig_dist,
+            trigger_mode=trigger_mode_str,
+            distance_mode=distance_mode,
+            flight_speed=speed,
+            gimbal_pitch=gimbal_pitch,
+        )
+
+        if waypoint_wait > 0.0:
+            wait_ms = int(waypoint_wait * 1000)
+            for wp in route.waypoints:
+                wp.acoes.insert(0, {"actiontype": 0, "actionparam": wait_ms})
+
+        warnings = save_litchi_csv(
+            output_file,
+            route,
+            default_speed=speed,
+            default_gimbal_pitch=gimbal_pitch,
+        )
+
+        for warning in warnings:
+            feedback.pushWarning(warning)
+
+        return {self.OUTPUT: output_file}

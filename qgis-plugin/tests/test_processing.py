@@ -12,6 +12,8 @@ from qgis.core import (
 )
 
 from qgc4qgis.plugin import Qgc4QgisPlugin
+from qgc4qgis.processing.alg_export_dji import ExportDjiAlgorithm
+from qgc4qgis.processing.alg_export_litchi import ExportLitchiAlgorithm
 from qgc4qgis.processing.alg_export_plan import ExportPlanAlgorithm
 from qgc4qgis.processing.alg_photo_centers import PhotoCentersAlgorithm
 from qgc4qgis.processing.alg_survey_grid import SurveyGridAlgorithm
@@ -26,9 +28,11 @@ def test_provider_metadata():
 
     provider.loadAlgorithms()
     algs = provider.algorithms()
-    assert len(algs) >= 3
+    assert len(algs) >= 5
     assert any(alg.name() == "gerar_grade_voo" for alg in algs)
     assert any(alg.name() == "exportar_plano_qgc" for alg in algs)
+    assert any(alg.name() == "exportar_litchi_csv" for alg in algs)
+    assert any(alg.name() == "exportar_dji_kmz" for alg in algs)
     assert any(alg.name() == "gerar_centros_foto" for alg in algs)
 
 
@@ -289,3 +293,152 @@ def test_photo_centers_execution():
     assert first_footprint["area_m2"] > 0.0
     assert first_footprint.geometry().isGeosValid()
     assert first_footprint.geometry().type() == Qgis.GeometryType.Polygon
+
+
+def test_export_litchi_metadata():
+    """Verify ExportLitchiAlgorithm metadata."""
+    alg = ExportLitchiAlgorithm()
+    assert alg.name() == "exportar_litchi_csv"
+    assert alg.displayName() == "Exportar missão Litchi (.csv)"
+    assert alg.group() == "Planejamento de Voo"
+    assert alg.groupId() == "planejamento_voo"
+    assert alg.createInstance().name() == alg.name()
+    assert "Exporta uma missão" in alg.shortHelpString()
+
+
+def test_export_litchi_execution(tmp_path):
+    """Verify ExportLitchiAlgorithm execution writing a Litchi CSV file."""
+    import csv
+
+    layer = QgsVectorLayer("Polygon?crs=EPSG:4326", "poly_input", "memory")
+    pr = layer.dataProvider()
+
+    poly_pts = [
+        QgsPointXY(0.0, 0.0),
+        QgsPointXY(0.001, 0.0),
+        QgsPointXY(0.001, 0.001),
+        QgsPointXY(0.0, 0.001),
+    ]
+    feat = QgsFeature()
+    feat.setGeometry(QgsGeometry.fromPolygonXY([poly_pts]))
+    pr.addFeatures([feat])
+    layer.updateExtents()
+
+    output_path = str(tmp_path / "test_litchi.csv")
+
+    alg = ExportLitchiAlgorithm()
+    alg.initAlgorithm()
+
+    parameters = {
+        alg.INPUT: layer,
+        alg.CAMERA: 0,
+        alg.ALTITUDE: 100.0,
+        alg.GSD: 0.0,
+        alg.OVERLAP_SIDE: 70.0,
+        alg.OVERLAP_FRONTAL: 70.0,
+        alg.ANGLE: 0.0,
+        alg.TURNAROUND: 5.0,
+        alg.ENTRY_LOCATION: 0,
+        alg.REFLY: False,
+        alg.TRIGGER_MODE: 0,  # Por distância
+        alg.SPEED: 5.0,
+        alg.GIMBAL_PITCH: -90.0,
+        alg.WAYPOINT_WAIT: 2.0,  # 2s wait -> 2000ms
+        alg.OUTPUT: output_path,
+    }
+
+    context = QgsProcessingContext()
+    feedback = QgsProcessingFeedback()
+
+    results = alg.processAlgorithm(parameters, context, feedback)
+    assert alg.OUTPUT in results
+    assert results[alg.OUTPUT] == output_path
+
+    with open(output_path, encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+    assert len(rows) > 0
+    assert "latitude" in rows[0]
+    assert "longitude" in rows[0]
+    assert "altitude(m)" in rows[0]
+    assert "actiontype1" in rows[0]
+    # Check wait action (actiontype 0 = Stay, actionparam = 2000ms)
+    assert rows[0]["actiontype1"] == "0"
+    assert rows[0]["actionparam1"] == "2000.0"
+
+
+def test_export_dji_metadata():
+    """Verify ExportDjiAlgorithm metadata."""
+    alg = ExportDjiAlgorithm()
+    assert alg.name() == "exportar_dji_kmz"
+    assert alg.displayName() == "Exportar missão DJI Fly (.kmz)"
+    assert alg.group() == "Planejamento de Voo"
+    assert alg.groupId() == "planejamento_voo"
+    assert alg.createInstance().name() == alg.name()
+    assert "Exporta uma missão" in alg.shortHelpString()
+
+
+def test_export_dji_execution(tmp_path):
+    """Verify ExportDjiAlgorithm execution writing a DJI WPML KMZ file."""
+    import zipfile
+
+    layer = QgsVectorLayer("Polygon?crs=EPSG:4326", "poly_input", "memory")
+    pr = layer.dataProvider()
+
+    poly_pts = [
+        QgsPointXY(0.0, 0.0),
+        QgsPointXY(0.001, 0.0),
+        QgsPointXY(0.001, 0.001),
+        QgsPointXY(0.0, 0.001),
+    ]
+    feat = QgsFeature()
+    feat.setGeometry(QgsGeometry.fromPolygonXY([poly_pts]))
+    pr.addFeatures([feat])
+    layer.updateExtents()
+
+    output_path = str(tmp_path / "test_dji.kmz")
+
+    alg = ExportDjiAlgorithm()
+    alg.initAlgorithm()
+
+    parameters = {
+        alg.INPUT: layer,
+        alg.CAMERA: 0,
+        alg.ALTITUDE: 100.0,
+        alg.GSD: 0.0,
+        alg.OVERLAP_SIDE: 70.0,
+        alg.OVERLAP_FRONTAL: 70.0,
+        alg.ANGLE: 0.0,
+        alg.TURNAROUND: 5.0,
+        alg.ENTRY_LOCATION: 0,
+        alg.REFLY: False,
+        alg.TRIGGER_MODE: 0,  # Por distância
+        alg.SPEED: 5.0,
+        alg.GIMBAL_PITCH: -90.0,
+        alg.WAYPOINT_WAIT: 1.0,
+        alg.FINISH_ACTION: 0,  # goHome
+        alg.RC_LOST_ACTION: 0,  # goBack
+        alg.TRANSITIONAL_SPEED: 8.0,
+        alg.ZIP_LAYOUT: 0,  # subfolder wpmz/
+        alg.OUTPUT: output_path,
+    }
+
+    context = QgsProcessingContext()
+    feedback = QgsProcessingFeedback()
+
+    results = alg.processAlgorithm(parameters, context, feedback)
+    assert alg.OUTPUT in results
+    assert results[alg.OUTPUT] == output_path
+
+    with zipfile.ZipFile(output_path, "r") as zf:
+        namelist = zf.namelist()
+        assert "wpmz/template.kml" in namelist
+        assert "wpmz/waylines.wpml" in namelist
+
+        template_content = zf.read("wpmz/template.kml").decode("utf-8")
+        assert "<wpml:finishAction>goHome</wpml:finishAction>" in template_content
+        assert "<wpml:executeRCLostAction>goBack</wpml:executeRCLostAction>" in template_content
+        assert (
+            "<wpml:globalTransitionalSpeed>8.0</wpml:globalTransitionalSpeed>" in template_content
+        )
