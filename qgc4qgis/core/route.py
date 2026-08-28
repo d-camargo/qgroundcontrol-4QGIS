@@ -262,3 +262,51 @@ def route_from_transects(
         modo_altitude=dist_mode_val,
         avisos=warnings_list,
     )
+
+
+def rebase_route_to_takeoff(route: Route, takeoff_elevation: float) -> Route:
+    """Rebase route waypoints altitude relative to takeoff elevation.
+
+    If route.modo_altitude is already DistanceMode.RELATIVE, returns route unchanged (idempotent).
+    Otherwise returns a new Route instance with updated waypoint altitudes and distance mode.
+    """
+    if route.modo_altitude == DistanceMode.RELATIVE:
+        return route
+
+    new_waypoints: list[RouteWaypoint] = []
+    for wp in route.waypoints:
+        new_wp = RouteWaypoint(
+            lat=wp.lat,
+            lon=wp.lon,
+            altura=wp.altura - takeoff_elevation,
+            velocidade=wp.velocidade,
+            heading=wp.heading,
+            gimbal_pitch=wp.gimbal_pitch,
+            acoes=[dict(a) for a in wp.acoes],
+        )
+        wait_time = getattr(wp, "wait_time", None)
+        if wait_time is not None:
+            new_wp.wait_time = wait_time
+        new_waypoints.append(new_wp)
+
+    min_alt = min((wp.altura for wp in new_waypoints), default=0.0)
+    max_alt = max((wp.altura for wp in new_waypoints), default=0.0)
+
+    warnings = list(route.avisos)
+    warnings.append(
+        f"Modo terreno convertido para altura relativa ao ponto de decolagem (elevação {takeoff_elevation:.1f} m); alturas de {min_alt:.1f} m a {max_alt:.1f} m."
+    )
+
+    le_zero_count = sum(1 for wp in new_waypoints if wp.altura <= 0)
+    if le_zero_count > 0:
+        warnings.append(
+            f"Altura relativa ≤ 0 em {le_zero_count} waypoint(s): a rota passa abaixo do ponto de decolagem."
+        )
+
+    return Route(
+        waypoints=new_waypoints,
+        modo_disparo=route.modo_disparo,
+        distancia_disparo=route.distancia_disparo,
+        modo_altitude=DistanceMode.RELATIVE,
+        avisos=warnings,
+    )

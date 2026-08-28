@@ -28,6 +28,21 @@ def test_build_mission_config_defaults():
     mc = build_mission_config()
     assert mc.tag == f"{{{WPML_NS}}}missionConfig"
 
+    children_tags = [c.tag.replace(f"{{{WPML_NS}}}", "") for c in mc]
+    assert children_tags == [
+        "flyToWaylineMode",
+        "finishAction",
+        "exitOnRCLost",
+        "executeRCLostAction",
+        "takeOffSecurityHeight",
+        "takeOffRefPointAGLHeight",
+        "globalTransitionalSpeed",
+        "droneInfo",
+        "payloadInfo",
+    ]
+
+    assert mc.find(f"{{{WPML_NS}}}takeOffRefPoint") is None
+
     fly_mode = mc.find(f"{{{WPML_NS}}}flyToWaylineMode")
     assert fly_mode is not None and fly_mode.text == "safely"
 
@@ -40,17 +55,25 @@ def test_build_mission_config_defaults():
     exec_rc = mc.find(f"{{{WPML_NS}}}executeRCLostAction")
     assert exec_rc is not None and exec_rc.text == "goBack"
 
+    sec_height = mc.find(f"{{{WPML_NS}}}takeOffSecurityHeight")
+    assert sec_height is not None and sec_height.text == "20"
+
+    agl_height = mc.find(f"{{{WPML_NS}}}takeOffRefPointAGLHeight")
+    assert agl_height is not None and agl_height.text == "0"
+
     speed = mc.find(f"{{{WPML_NS}}}globalTransitionalSpeed")
     assert speed is not None and speed.text == "5.0"
 
     drone_info = mc.find(f"{{{WPML_NS}}}droneInfo")
     assert drone_info is not None
+    assert drone_info.find(f"{{{WPML_NS}}}droneEnumValue").text == "68"
+    assert drone_info.find(f"{{{WPML_NS}}}droneSubEnumValue").text == "0"
 
-    drone_enum = drone_info.find(f"{{{WPML_NS}}}droneEnumValue")
-    assert drone_enum is not None and drone_enum.text == "68"
-
-    drone_sub = drone_info.find(f"{{{WPML_NS}}}droneSubEnumValue")
-    assert drone_sub is not None and drone_sub.text == "0"
+    payload_info = mc.find(f"{{{WPML_NS}}}payloadInfo")
+    assert payload_info is not None
+    assert payload_info.find(f"{{{WPML_NS}}}payloadEnumValue").text == "0"
+    assert payload_info.find(f"{{{WPML_NS}}}payloadSubEnumValue").text == "0"
+    assert payload_info.find(f"{{{WPML_NS}}}payloadPositionIndex").text == "0"
 
 
 def test_build_mission_config_custom():
@@ -71,6 +94,46 @@ def test_build_mission_config_custom():
     drone_info = mc.find(f"{{{WPML_NS}}}droneInfo")
     assert drone_info.find(f"{{{WPML_NS}}}droneEnumValue").text == "77"
     assert drone_info.find(f"{{{WPML_NS}}}droneSubEnumValue").text == "1"
+
+
+def test_build_mission_config_takeoff_ref_point_and_order():
+    mc = build_mission_config(
+        takeoff_security_height=30.0,
+        takeoff_ref_point=(-23.5505, -46.6333, 100.0),
+        takeoff_ref_point_agl_height=5.0,
+        payload_enum_value=1,
+        payload_sub_enum_value=2,
+        payload_position_index=3,
+    )
+    children_tags = [c.tag.replace(f"{{{WPML_NS}}}", "") for c in mc]
+    assert children_tags == [
+        "flyToWaylineMode",
+        "finishAction",
+        "exitOnRCLost",
+        "executeRCLostAction",
+        "takeOffSecurityHeight",
+        "takeOffRefPoint",
+        "takeOffRefPointAGLHeight",
+        "globalTransitionalSpeed",
+        "droneInfo",
+        "payloadInfo",
+    ]
+
+    ref_elem = mc.find(f"{{{WPML_NS}}}takeOffRefPoint")
+    assert ref_elem is not None
+    assert ref_elem.text == "-23.5505,-46.6333,100"
+
+    sec_elem = mc.find(f"{{{WPML_NS}}}takeOffSecurityHeight")
+    assert sec_elem is not None and sec_elem.text == "30"
+
+    agl_elem = mc.find(f"{{{WPML_NS}}}takeOffRefPointAGLHeight")
+    assert agl_elem is not None and agl_elem.text == "5"
+
+    payload_info = mc.find(f"{{{WPML_NS}}}payloadInfo")
+    assert payload_info is not None
+    assert payload_info.find(f"{{{WPML_NS}}}payloadEnumValue").text == "1"
+    assert payload_info.find(f"{{{WPML_NS}}}payloadSubEnumValue").text == "2"
+    assert payload_info.find(f"{{{WPML_NS}}}payloadPositionIndex").text == "3"
 
 
 def test_build_template_kml_structure():
@@ -359,16 +422,33 @@ def test_save_kmz_terrain_mode_refusal():
         waypoints=[RouteWaypoint(lat=-23.55, lon=-46.63, altura=50.0)],
         modo_altitude=DistanceMode.TERRAIN,
     )
+    msg_regex = r"rebase_route_to_takeoff\(\) antes de exportar \(D10\)"
     with tempfile.TemporaryDirectory() as tmpdir:
         kmz_path = Path(tmpdir) / "terrain.kmz"
-        with pytest.raises(ValueError, match="D10"):
+        with pytest.raises(ValueError, match=msg_regex):
             save_kmz(kmz_path, route=route_terrain)
 
-    with pytest.raises(ValueError, match="D10"):
+    with pytest.raises(ValueError, match=msg_regex):
         validate_wpml_route(distance_mode=DistanceMode.TERRAIN)
 
-    with pytest.raises(ValueError, match="D10"):
+    with pytest.raises(ValueError, match=msg_regex):
         validate_wpml_route(execute_height_mode="realTimeFollowSurface")
+
+
+def test_validate_wpml_route_le_zero_height_warning():
+    route_le_zero = Route(
+        waypoints=[
+            RouteWaypoint(lat=-23.55, lon=-46.63, altura=0.0),
+            RouteWaypoint(lat=-23.56, lon=-46.64, altura=-5.0),
+            RouteWaypoint(lat=-23.57, lon=-46.65, altura=10.0),
+        ],
+        modo_altitude=DistanceMode.RELATIVE,
+    )
+    warnings = validate_wpml_route(route=route_le_zero)
+    assert len(warnings) == 1
+    assert warnings[0] == (
+        "Altura relativa ≤ 0 em 2 waypoint(s): a rota passa abaixo do ponto de decolagem."
+    )
 
 
 def test_save_kmz_waypoint_limit_warning():
@@ -457,3 +537,54 @@ def test_wpml_kmz_xml_validation():
                     gimbal_actions.append(act)
 
         assert len(gimbal_actions) == 1
+
+
+def test_template_kml_waypoint_heights_equal_waylines_execute_heights():
+    waypoints = [
+        {"lon": -46.633, "lat": -23.550, "executeHeight": 41.0},
+        {"lon": -46.634, "lat": -23.551, "executeHeight": 52.0},
+        {"lon": -46.635, "lat": -23.552, "executeHeight": 63.0},
+    ]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        kmz_path = Path(tmpdir) / "heights_test.kmz"
+        save_kmz(kmz_path, waypoints=waypoints)
+        assert kmz_path.exists()
+
+        with zipfile.ZipFile(kmz_path, "r") as zf:
+            template_bytes = zf.read("wpmz/template.kml")
+            waylines_bytes = zf.read("wpmz/waylines.wpml")
+
+        t_root = ET.fromstring(template_bytes)
+        w_root = ET.fromstring(waylines_bytes)
+
+        t_placemarks = t_root.findall(
+            f"{{{KML_NS}}}Document/{{{KML_NS}}}Folder/{{{KML_NS}}}Placemark"
+        )
+        w_placemarks = w_root.findall(
+            f"{{{KML_NS}}}Document/{{{KML_NS}}}Folder/{{{KML_NS}}}Placemark"
+        )
+
+        assert len(t_placemarks) == 3
+        assert len(w_placemarks) == 3
+
+        t_heights = [pm.find(f"{{{WPML_NS}}}height").text for pm in t_placemarks]
+        w_heights = [pm.find(f"{{{WPML_NS}}}executeHeight").text for pm in w_placemarks]
+
+        assert t_heights == ["41.0", "52.0", "63.0"]
+        assert w_heights == ["41.0", "52.0", "63.0"]
+        assert t_heights == w_heights
+
+
+def test_template_kml_template_type_and_height_mode():
+    waypoints = [(-46.633, -23.550, 50.0)]
+    kml = build_template_kml(waypoints=waypoints, execute_height_mode="relativeToStartPoint")
+    folder = kml.find(f"{{{KML_NS}}}Document/{{{KML_NS}}}Folder")
+    assert folder is not None
+
+    template_type = folder.find(f"{{{WPML_NS}}}templateType")
+    assert template_type is not None and template_type.text == "waypoint"
+
+    sys_param = folder.find(f"{{{WPML_NS}}}waylineCoordinateSysParam")
+    assert sys_param is not None
+    height_mode = sys_param.find(f"{{{WPML_NS}}}heightMode")
+    assert height_mode is not None and height_mode.text == "relativeToStartPoint"

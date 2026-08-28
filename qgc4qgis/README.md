@@ -125,15 +125,60 @@ $$\text{Altura de Voo (m)} = \frac{\text{GSD (cm/px)} \times \text{Distância Fo
 Além do formato nativo `.plan` do QGroundControl, o QGC4QGIS permite exportar missões para os aplicativos **Litchi** (formato `.csv`) e **DJI Fly** (formato WPML `.kmz`).
 
 ### 1. Exportação e Carga no Litchi
+
+Ao carregar missões no Litchi, é importante diferenciar as duas interfaces do Mission Hub:
+
+| Interface | URL | Formatos de Missão Suportados |
+| :--- | :--- | :--- |
+| **Hub Clássico** | `flylitchi.com/hub` | `.csv`, `.kml`, `.wpml` |
+| **Hub 2** | `hub.flylitchi.com` | `.csv`, `.kmz` (WPML) |
+
+> [!WARNING]
+> **Atenção ao importar no Hub 2 (`hub.flylitchi.com`):**  
+> O Hub 2 possui **dois** diálogos de importação distintos. O diálogo de área/overlay (`.kml`, `.kmz`, `.geojson`, `.json`) serve apenas para desenhar camadas de mapa e **nunca cria waypoints** de voo. Para carregar a rota de voo, utilize sempre o diálogo de importação de missão.
+
+> [!NOTE]
+> **Compatibilidade do arquivo `.kmz`:**  
+> O mesmo arquivo `.kmz` exportado para o **DJI Fly** é importado pelo **Hub 2** como missão, pois o Hub 2 detecta os arquivos `template.kml` + `waylines.wpml` dentro do arquivo comprimido. O **hub clássico não lê arquivos `.kmz`**.
+
 1. **Passos de Carga**:
-   - Acesse o **Litchi Mission Hub** (`flylitchi.com/hub`) ou abra o aplicativo móvel Litchi.
-   - Acesse a opção **Mission Hub → Import** e selecione o arquivo `.csv` exportado pelo plugin.
+   - Acesse o **Litchi Mission Hub** (`flylitchi.com/hub` ou `hub.flylitchi.com`) ou abra o aplicativo móvel Litchi.
+   - Acesse a opção de importação de missão (**Mission → Import**) e selecione o arquivo `.csv` (ou `.kmz` no Hub 2) exportado pelo plugin.
    - Clique em **Salvar** (*Save*) para sincronizar a missão importada com sua conta e dispositivos.
 2. **Três Ajustes Globais Manuais Exigidos (Formato D8)**:
    Ao importar uma missão em CSV no Litchi Mission Hub, três parâmetros globais precisam ser definidos manualmente no painel antes de salvar:
    - **Heading Mode** (Modo de Direção/Proa): escolher o comportamento da proa. Com **"Custom (WP)"** o aplicativo passa a usar o `heading(deg)` gravado no CSV (o azimute de cada transect).
    - **Finish Action** (Ação ao Finalizar): definir a ação executada ao término da rota (ex.: *Return to Home (RTH)*, *None* ou *Land*).
    - **Path Mode** (Modo de Trajetória): marcar **"Straight Lines"** (linhas retas) — o CSV é gerado com `curvesize=0` e não representa curvas.
+
+### 1.b Carga por KML no hub clássico (com ação de foto por waypoint)
+
+1. **Passos de Carga**:
+   - Acesse o **Litchi Mission Hub clássico** (`flylitchi.com/hub`).
+   - Acesse a opção de importação (**Mission → Import**) e selecione o arquivo `.kml`.
+   - **Marque a opção "Add take photo action"** e **deixe "Placemarks as POI" desmarcado**.
+   - Essa configuração insere automaticamente uma ação *Take Photo* em **todos** os waypoints e força o modo de trajetória para linhas retas (*Straight Lines*).
+
+2. **Requisito do Modo de Disparo**:
+   - O uso do formato `.kml` só faz sentido quando a missão é gerada com o **Modo de disparo = "Por foto"**. Caso contrário, os vértices do KML serão apenas as pontas (início e fim) dos transectos.
+   - Essa mesma opção (**Modo de disparo = "Por foto"**) já resolve a amostragem de waypoints para o formato `.csv`, que é a opção recomendada por transportar também proa, gimbal, velocidade e curva.
+
+3. **Parâmetros Ausentes no KML e Ajustes no Mission Hub**:
+   Como o formato KML contém apenas coordenadas geográficas e altitudes, os demais parâmetros não são importados e devem ser ajustados manualmente no Mission Hub:
+
+   | Parâmetro Ausente no KML | Comportamento Padrão no Hub Clássico | Onde Ajustar no Mission Hub |
+   | :--- | :--- | :--- |
+   | **Proa (Heading)** | Direção para o próximo waypoint (ou Norte) | Painel de Configurações da Missão (`Heading Mode`) |
+   | **Gimbal Pitch** | $0^\circ$ (horizontal) | Propriedades do Waypoint ou Ações |
+   | **Velocidade (Speed)** | Velocidade padrão global da missão | Painel de Configurações da Missão (`Speed`) |
+   | **Curva (Cruising/Curved)** | *Straight Lines* (forçado por *Take Photo*) | Painel de Configurações da Missão (`Path Mode`) |
+   | **Pontos de Interesse (POI)** | Não importados (desmarcar "Placemarks as POI") | Adicionar manualmente no mapa |
+   | **Modo de Altitude Explícito** | Relativo ao solo no ponto de decolagem (*Relative*) | Ajuste individual do waypoint |
+
+4. **Comportamentos Silenciosos e Limites do Importador KML**:
+   - **Avisos Silenciosos de Altitude**: O importador KML do hub clássico converte silenciosamente **altura 0 m para 30 m** e trunca qualquer altitude fora do intervalo `[-200, 500]` metros (o plugin avisa o usuário antes da exportação sobre esses cenários).
+   - **Teto de Waypoints**: O teto de waypoints medido no hub clássico para arquivos KML é de **10.000** (acima disso, os waypoints excedentes somem silenciosamente sem aviso), enquanto o exportador `.csv` continua avisando a partir de 99.
+   - **Incompatibilidade de `.kmz` e `waylines.wpml`**: O formato **`.kmz` não funciona no hub clássico** (funciona apenas no Hub 2, `hub.flylitchi.com`). **Não** se deve alimentar o arquivo `waylines.wpml` ao hub clássico, porque as coordenadas do WPML não têm altitude e todas as alturas da missão virariam 30 m.
 
 ### 2. Exportação e Carga no DJI Fly
 1. **Passos de Carga**:
@@ -148,10 +193,56 @@ Além do formato nativo `.plan` do QGroundControl, o QGC4QGIS permite exportar m
    > **Não edite ou salve a missão importada dentro do DJI Fly!**  
    > Se a missão for reeditada no aplicativo DJI Fly, o app reescreverá a estrutura do arquivo WPML `.kmz`, podendo corromper ou remover os gatilhos de captura de foto por distância/tempo e ações customizadas nos waypoints.
 
-### 3. Limitações dos Aplicativos
+### 3. Limitações e Comportamento dos Aplicativos
 - **Limite de Waypoints**:
   - **Litchi**: limite máximo de **99 waypoints** por missão; o plugin avisa quando a missão passa desse limite.
   - **DJI Fly**: o teto de waypoints não é documentado publicamente pela DJI; o valor citado pela comunidade é **200**, e o plugin avisa quando a missão passa dele.
-- **Modo Terreno Indisponível no DJI Fly**:
-  - O WPML só aceita altura relativa ao ponto de decolagem, altura elipsoidal (WGS84) ou seguimento de terreno em tempo real. O DEM usado pelo plugin é ortométrico (MSL) e a conversão para altura elipsoidal exigiria a ondulação geoidal, que o plugin não tem. Por isso o exportador DJI **recusa** a exportação em modo terreno com mensagem explícita. No Litchi o modo terreno é exportado normalmente (`altitudemode=1`, MSL).
+- **Suporte ao Modo Terreno no DJI Fly (WPML)**:
+  - O modo terreno é convertido para altura relativa ao ponto de decolagem, permitindo que o voo continue seguindo o relevo.
+  - O ponto de decolagem é determinado pelo parâmetro `PONTO_DECOLAGEM` (padrão: elevação do primeiro waypoint).
+  - O plugin emite um aviso quando alguma altura relativa calculada fica $\le 0$.
+
+---
+
+## 6. Base de Elevação Automática
+
+O QGC4QGIS inclui um recurso para obtenção automática de dados de elevação do terreno (DEM/DTM) diretamente da internet, permitindo planejar missões com acompanhamento de relevo (*Terrain Following*) sem necessidade de carregar previamente um arquivo raster local.
+
+### 1. Fonte dos Dados e Consistência com o QGC
+
+- **Fonte**: Copernicus DEM GLO-30 (resolução global de 30 metros), disponibilizado via serviço web REST da Auterion no endpoint `terrain-ce.suite.auterion.com/api/v1/carpet`.
+- **Consistência com o QGroundControl**: Esta é exatamente a **mesma** fonte e API utilizada nativamente pelo QGroundControl (conforme implementado no fonte [`ElevationMapProvider.h`](../src/Terrain/ElevationMapProvider.h)), garantindo que as altitudes de relevo amostradas no arquivo `.plan` sejam idênticas às que o QGC recalcula e consulta internamente.
+
+### 2. Como Utilizar
+
+Você pode baixar a grade de elevação da sua área de missão através de duas interfaces no QGIS:
+
+1. **Painel Acoplável (Dock Widget)**: No grupo **Terreno**, clique no botão **"Baixar DEM da área…"**. O complemento calculará o envelope da área de missão com a margem configurada, baixará automaticamente o raster de elevação e o adicionará às camadas do projeto QGIS.
+2. **Caixa de Ferramentas de Processamento (Processing Toolbox)**: Utilize o algoritmo `qgc4qgis:baixar_dem_copernicus`. Ele permite especificar a extensão geográfica (polígono ou envelope), a margem de segurança e o caminho de destino do arquivo GeoTIFF gerado.
+
+### 3. Parâmetro de Margem
+
+O parâmetro de **Margem** (expansão da extensão) adiciona um raio de cobertura extra em torno do polígono da missão ao solicitar os dados ao servidor. Essa margem serve para:
+- Garantir a cobertura de elevação em áreas de curva e aceleração de manobra (*turnaround*) localizadas fora do perímetro principal do polígono.
+- Assegurar a amostragem de relevo no ponto de decolagem e nas trajetórias de aproximação até o primeiro waypoint.
+
+### 4. Limitações da API
+
+- **Resolução Espacial**: Resolução nominal de ~30 metros (1 segundo de arco).
+- **Conexão com a Internet**: Exige acesso ativo à rede durante o download dos ladrilhos (*tiles*).
+- **Teto de Ladrilhos por Requisição**: O servidor limita cada requisição a no máximo **256 ladrilhos (*tiles*)**, o que corresponde a uma caixa delimitadora (*bounding box*) de aproximadamente **$18 \times 18\text{ km}$**. Requisições com caixas delimitadoras maiores são recusadas pelo servidor.
+
+### 5. Atribuição Obrigatória
+
+Conforme os termos de uso do provedor, a utilização dos dados do Copernicus DEM GLO-30 exige a seguinte atribuição de direitos autorais:
+
+```text
+© Airbus Defence and Space GmbH
+```
+
+### 6. Referencial de Altitude (Geoide EGM2008)
+
+> [!NOTE]
+> **Convenção de Altitude Ortométrica:**  
+> As alturas fornecidas pelo Copernicus DEM são **ortométricas** (referenciadas ao modelo geoidal **EGM2008** — altitude acima do nível médio do mar), seguindo exatamente a mesma convenção adotada pelo QGroundControl. Elas **não devem ser confundidas com a altura elipsoidal** obtida diretamente por receptores GNSS/GPS sem aplicação do modelo geoidal.
 

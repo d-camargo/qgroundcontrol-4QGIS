@@ -8,6 +8,7 @@ from qgc4qgis.core.route import (
     PhotoCenter,
     Route,
     RouteWaypoint,
+    rebase_route_to_takeoff,
     route_from_transects,
     sample_photo_centers,
 )
@@ -199,3 +200,112 @@ def test_route_200m_square_por_distancia_and_por_foto() -> None:
     )
     assert len(route_warn.warnings) == 1
     assert "excede o limite" in route_warn.warnings[0]
+
+
+def test_rebase_route_to_takeoff_calc_above_terrain() -> None:
+    wps = [
+        RouteWaypoint(
+            lat=-23.55,
+            lon=-46.63,
+            altura=110.0,
+            velocidade=10.0,
+            heading=90.0,
+            gimbal_pitch=-90.0,
+            acoes=[{"actiontype": 1}],
+        ),
+        RouteWaypoint(
+            lat=-23.56,
+            lon=-46.64,
+            altura=120.0,
+            velocidade=10.0,
+            heading=90.0,
+            gimbal_pitch=-90.0,
+            acoes=[],
+        ),
+        RouteWaypoint(
+            lat=-23.57,
+            lon=-46.65,
+            altura=130.0,
+            velocidade=10.0,
+            heading=90.0,
+            gimbal_pitch=-90.0,
+            acoes=[],
+        ),
+    ]
+    route_orig = Route(
+        waypoints=wps,
+        modo_disparo="POR_FOTO",
+        distancia_disparo=25.0,
+        modo_altitude=DistanceMode.CALC_ABOVE_TERRAIN,
+        avisos=["Aviso original"],
+    )
+
+    rebased = rebase_route_to_takeoff(route_orig, takeoff_elevation=60.0)
+
+    assert rebased.modo_altitude == DistanceMode.RELATIVE
+    assert [wp.altura for wp in rebased.waypoints] == [50.0, 60.0, 70.0]
+    assert rebased.modo_disparo == "POR_FOTO"
+    assert rebased.distancia_disparo == 25.0
+    assert len(rebased.avisos) == 2
+    assert rebased.avisos[0] == "Aviso original"
+    assert rebased.avisos[1] == (
+        "Modo terreno convertido para altura relativa ao ponto de decolagem "
+        "(elevação 60.0 m); alturas de 50.0 m a 70.0 m."
+    )
+    assert rebased.waypoints[0].velocidade == 10.0
+    assert rebased.waypoints[0].heading == 90.0
+    assert rebased.waypoints[0].gimbal_pitch == -90.0
+    assert rebased.waypoints[0].acoes == [{"actiontype": 1}]
+
+    # Original route not mutated
+    assert route_orig.modo_altitude == DistanceMode.CALC_ABOVE_TERRAIN
+    assert [wp.altura for wp in route_orig.waypoints] == [110.0, 120.0, 130.0]
+    assert route_orig.avisos == ["Aviso original"]
+
+
+def test_rebase_route_to_takeoff_already_relative() -> None:
+    wps = [RouteWaypoint(lat=-23.55, lon=-46.63, altura=50.0)]
+    route_rel = Route(
+        waypoints=wps,
+        modo_altitude=DistanceMode.RELATIVE,
+        avisos=["Aviso preexistente"],
+    )
+
+    rebased = rebase_route_to_takeoff(route_rel, takeoff_elevation=60.0)
+
+    assert rebased is route_rel
+    assert rebased.modo_altitude == DistanceMode.RELATIVE
+    assert [wp.altura for wp in rebased.waypoints] == [50.0]
+    assert rebased.avisos == ["Aviso preexistente"]
+
+
+def test_rebase_route_to_takeoff_negative_altitude_warning() -> None:
+    wps = [
+        RouteWaypoint(lat=-23.55, lon=-46.63, altura=50.0),
+        RouteWaypoint(lat=-23.56, lon=-46.64, altura=60.0),
+    ]
+    route_orig = Route(
+        waypoints=wps,
+        modo_altitude=DistanceMode.ABSOLUTE,
+    )
+
+    rebased = rebase_route_to_takeoff(route_orig, takeoff_elevation=60.0)
+
+    assert [wp.altura for wp in rebased.waypoints] == [-10.0, 0.0]
+    assert rebased.modo_altitude == DistanceMode.RELATIVE
+    assert len(rebased.avisos) == 2
+    assert rebased.avisos[1] == (
+        "Altura relativa ≤ 0 em 2 waypoint(s): a rota passa abaixo do ponto de decolagem."
+    )
+
+
+def test_rebase_route_to_takeoff_preserves_wait_time() -> None:
+    wp = RouteWaypoint(lat=-23.55, lon=-46.63, altura=110.0)
+    wp.wait_time = 2.5
+    route_orig = Route(waypoints=[wp], modo_altitude=DistanceMode.CALC_ABOVE_TERRAIN)
+
+    rebased = rebase_route_to_takeoff(route_orig, takeoff_elevation=60.0)
+
+    assert rebased.waypoints[0].altura == 50.0
+    assert rebased.waypoints[0].wait_time == 2.5
+    assert route_orig.waypoints[0].wait_time == 2.5

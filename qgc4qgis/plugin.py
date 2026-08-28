@@ -1,5 +1,6 @@
 """QGC4QGIS Plugin main class implementation."""
 
+import configparser
 import os
 from typing import TYPE_CHECKING
 
@@ -19,11 +20,21 @@ except AttributeError:
     RIGHT_DOCK_WIDGET_AREA = Qt.RightDockWidgetArea  # Qt5 (PyQt5)
 
 
+def _metadata_version() -> str:
+    try:
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read(os.path.join(os.path.dirname(__file__), "metadata.txt"), encoding="utf-8")
+        return config["general"]["version"]
+    except Exception:
+        return "0.0.0"
+
+
 class Qgc4QgisPlugin:
     """QGIS Plugin to integrate QGroundControl functionalities."""
 
     NAME = "QGC4QGIS"
-    VERSION = "0.1.0"
+    VERSION = _metadata_version()
 
     def __init__(self, iface):
         """Constructor.

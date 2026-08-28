@@ -33,9 +33,15 @@ def build_mission_config(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
 ) -> ET.Element:
     """Build a wpml:missionConfig XML element for DJI WPML (D9 schema).
 
@@ -43,9 +49,15 @@ def build_mission_config(
     :param finish_action: Action upon mission completion (default "goHome").
     :param exit_on_rc_lost: Behavior when RC signal is lost (default "executeLostAction").
     :param execute_rc_lost_action: Action executed when RC is lost (default "goBack").
+    :param takeoff_security_height: Security takeoff height (default 20.0).
+    :param takeoff_ref_point: Optional (lat, lon, alt) takeoff reference point tuple.
+    :param takeoff_ref_point_agl_height: Takeoff ref point AGL height (default 0.0).
     :param global_transitional_speed: Global transitional speed in m/s (default 5.0).
     :param drone_enum_value: DJI drone model enum value (default 68 for D9).
     :param drone_sub_enum_value: DJI drone sub-model enum value (default 0).
+    :param payload_enum_value: DJI payload model enum value (default 0).
+    :param payload_sub_enum_value: DJI payload sub-model enum value (default 0).
+    :param payload_position_index: DJI payload position index (default 0).
     :return: xml.etree.ElementTree.Element representing wpml:missionConfig.
     """
     mission_config = ET.Element(f"{{{WPML_NS}}}missionConfig")
@@ -62,6 +74,17 @@ def build_mission_config(
     exec_rc_elem = ET.SubElement(mission_config, f"{{{WPML_NS}}}executeRCLostAction")
     exec_rc_elem.text = str(execute_rc_lost_action)
 
+    sec_height_elem = ET.SubElement(mission_config, f"{{{WPML_NS}}}takeOffSecurityHeight")
+    sec_height_elem.text = _format_number(takeoff_security_height)
+
+    if takeoff_ref_point is not None:
+        lat, lon, alt = takeoff_ref_point
+        ref_elem = ET.SubElement(mission_config, f"{{{WPML_NS}}}takeOffRefPoint")
+        ref_elem.text = f"{_format_number(lat)},{_format_number(lon)},{_format_number(alt)}"
+
+    agl_height_elem = ET.SubElement(mission_config, f"{{{WPML_NS}}}takeOffRefPointAGLHeight")
+    agl_height_elem.text = _format_number(takeoff_ref_point_agl_height)
+
     speed_elem = ET.SubElement(mission_config, f"{{{WPML_NS}}}globalTransitionalSpeed")
     speed_elem.text = str(global_transitional_speed)
 
@@ -73,10 +96,22 @@ def build_mission_config(
     drone_sub_enum = ET.SubElement(drone_info, f"{{{WPML_NS}}}droneSubEnumValue")
     drone_sub_enum.text = str(int(drone_sub_enum_value))
 
+    payload_info = ET.SubElement(mission_config, f"{{{WPML_NS}}}payloadInfo")
+
+    payload_enum = ET.SubElement(payload_info, f"{{{WPML_NS}}}payloadEnumValue")
+    payload_enum.text = str(int(payload_enum_value))
+
+    payload_sub_enum = ET.SubElement(payload_info, f"{{{WPML_NS}}}payloadSubEnumValue")
+    payload_sub_enum.text = str(int(payload_sub_enum_value))
+
+    payload_pos = ET.SubElement(payload_info, f"{{{WPML_NS}}}payloadPositionIndex")
+    payload_pos.text = str(int(payload_position_index))
+
     return mission_config
 
 
 def build_template_kml(
+    waypoints: Sequence[Any] | Any | None = None,
     author: str = "QGC4QGIS",
     create_time: int | None = None,
     update_time: int | None = None,
@@ -85,9 +120,23 @@ def build_template_kml(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
+    template_id: int = 0,
+    execute_height_mode: str = "relativeToStartPoint",
+    auto_flight_speed: float = 5.0,
+    default_execute_height: float = 50.0,
+    default_waypoint_speed: float = 5.0,
+    heading_mode: str = "followWayline",
+    gimbal_pitch_mode: str = "manual",
+    use_straight_line: int = 1,
 ) -> ET.Element:
     """Build a complete template.kml XML root element for DJI WPML.
 
@@ -99,9 +148,15 @@ def build_template_kml(
     :param finish_action: Action upon mission completion.
     :param exit_on_rc_lost: Behavior when RC lost.
     :param execute_rc_lost_action: Specific action on RC lost.
+    :param takeoff_security_height: Security takeoff height.
+    :param takeoff_ref_point: Takeoff reference point (lat, lon, alt).
+    :param takeoff_ref_point_agl_height: Takeoff reference point AGL height.
     :param global_transitional_speed: Speed in m/s.
     :param drone_enum_value: DJI drone enum value (default 68).
     :param drone_sub_enum_value: DJI drone sub enum value (default 0).
+    :param payload_enum_value: DJI payload enum value (default 0).
+    :param payload_sub_enum_value: DJI payload sub enum value (default 0).
+    :param payload_position_index: DJI payload position index (default 0).
     :return: xml.etree.ElementTree.Element representing root <kml>.
     """
     now_ms = int(time.time() * 1000)
@@ -126,16 +181,96 @@ def build_template_kml(
             finish_action=finish_action,
             exit_on_rc_lost=exit_on_rc_lost,
             execute_rc_lost_action=execute_rc_lost_action,
+            takeoff_security_height=takeoff_security_height,
+            takeoff_ref_point=takeoff_ref_point,
+            takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
             global_transitional_speed=global_transitional_speed,
             drone_enum_value=drone_enum_value,
             drone_sub_enum_value=drone_sub_enum_value,
+            payload_enum_value=payload_enum_value,
+            payload_sub_enum_value=payload_sub_enum_value,
+            payload_position_index=payload_position_index,
         )
 
     doc.append(mission_config)
+
+    folder = ET.SubElement(doc, f"{{{KML_NS}}}Folder")
+
+    template_type_elem = ET.SubElement(folder, f"{{{WPML_NS}}}templateType")
+    template_type_elem.text = "waypoint"
+
+    template_id_elem = ET.SubElement(folder, f"{{{WPML_NS}}}templateId")
+    template_id_elem.text = str(int(template_id))
+
+    sys_param = ET.SubElement(folder, f"{{{WPML_NS}}}waylineCoordinateSysParam")
+    coord_mode = ET.SubElement(sys_param, f"{{{WPML_NS}}}coordinateMode")
+    coord_mode.text = "WGS84"
+    h_mode = ET.SubElement(sys_param, f"{{{WPML_NS}}}heightMode")
+    h_mode.text = str(execute_height_mode)
+    pos_type = ET.SubElement(sys_param, f"{{{WPML_NS}}}positioningType")
+    pos_type.text = "GPS"
+
+    auto_speed = ET.SubElement(folder, f"{{{WPML_NS}}}autoFlightSpeed")
+    auto_speed.text = _format_number(auto_flight_speed)
+
+    global_h = ET.SubElement(folder, f"{{{WPML_NS}}}globalHeight")
+    global_h.text = _format_number(default_execute_height)
+
+    gimbal_mode = ET.SubElement(folder, f"{{{WPML_NS}}}gimbalPitchMode")
+    gimbal_mode.text = str(gimbal_pitch_mode)
+
+    heading_param = ET.SubElement(folder, f"{{{WPML_NS}}}globalWaypointHeadingParam")
+    heading_mode_elem = ET.SubElement(heading_param, f"{{{WPML_NS}}}waypointHeadingMode")
+    heading_mode_elem.text = str(heading_mode)
+
+    straight_elem = ET.SubElement(folder, f"{{{WPML_NS}}}globalUseStraightLine")
+    straight_elem.text = str(int(use_straight_line))
+
+    if hasattr(waypoints, "waypoints") and not isinstance(waypoints, (list, tuple)):
+        route_obj = waypoints
+        wp_list = list(getattr(route_obj, "waypoints", []))
+    else:
+        wp_list = list(waypoints) if waypoints is not None else []
+
+    for index, wp in enumerate(wp_list):
+        lon, lat, height, speed = _parse_waypoint(
+            wp,
+            default_execute_height=default_execute_height,
+            default_waypoint_speed=default_waypoint_speed,
+        )
+
+        placemark = ET.SubElement(folder, f"{{{KML_NS}}}Placemark")
+
+        point = ET.SubElement(placemark, f"{{{KML_NS}}}Point")
+        coords = ET.SubElement(point, f"{{{KML_NS}}}coordinates")
+        coords.text = f"{lon},{lat}"
+
+        index_elem = ET.SubElement(placemark, f"{{{WPML_NS}}}index")
+        index_elem.text = str(index)
+
+        use_global_height = ET.SubElement(placemark, f"{{{WPML_NS}}}useGlobalHeight")
+        use_global_height.text = "0"
+
+        height_elem = ET.SubElement(placemark, f"{{{WPML_NS}}}height")
+        height_elem.text = str(height)
+
+        use_global_speed = ET.SubElement(placemark, f"{{{WPML_NS}}}useGlobalSpeed")
+        use_global_speed.text = "0"
+
+        wp_speed_elem = ET.SubElement(placemark, f"{{{WPML_NS}}}waypointSpeed")
+        wp_speed_elem.text = str(speed)
+
+        use_global_heading = ET.SubElement(placemark, f"{{{WPML_NS}}}useGlobalHeadingParam")
+        use_global_heading.text = "1"
+
+        use_global_turn = ET.SubElement(placemark, f"{{{WPML_NS}}}useGlobalTurnParam")
+        use_global_turn.text = "1"
+
     return kml_root
 
 
 def serialize_template_kml(
+    waypoints: Sequence[Any] | Any | None = None,
     author: str = "QGC4QGIS",
     create_time: int | None = None,
     update_time: int | None = None,
@@ -144,9 +279,23 @@ def serialize_template_kml(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
+    template_id: int = 0,
+    execute_height_mode: str = "relativeToStartPoint",
+    auto_flight_speed: float = 5.0,
+    default_execute_height: float = 50.0,
+    default_waypoint_speed: float = 5.0,
+    heading_mode: str = "followWayline",
+    gimbal_pitch_mode: str = "manual",
+    use_straight_line: int = 1,
     kml_root: ET.Element | None = None,
     indent: bool = True,
 ) -> str:
@@ -160,15 +309,22 @@ def serialize_template_kml(
     :param finish_action: Action upon mission completion.
     :param exit_on_rc_lost: Behavior when RC lost.
     :param execute_rc_lost_action: Specific action on RC lost.
+    :param takeoff_security_height: Security takeoff height.
+    :param takeoff_ref_point: Takeoff reference point (lat, lon, alt).
+    :param takeoff_ref_point_agl_height: Takeoff reference point AGL height.
     :param global_transitional_speed: Speed in m/s.
     :param drone_enum_value: DJI drone enum value (default 68).
     :param drone_sub_enum_value: DJI drone sub enum value (default 0).
+    :param payload_enum_value: DJI payload enum value (default 0).
+    :param payload_sub_enum_value: DJI payload sub enum value (default 0).
+    :param payload_position_index: DJI payload position index (default 0).
     :param kml_root: Optional pre-built root <kml> Element.
     :param indent: Whether to pretty-print indent the XML (default True).
     :return: Formatted XML string.
     """
     if kml_root is None:
         kml_root = build_template_kml(
+            waypoints=waypoints,
             author=author,
             create_time=create_time,
             update_time=update_time,
@@ -177,9 +333,23 @@ def serialize_template_kml(
             finish_action=finish_action,
             exit_on_rc_lost=exit_on_rc_lost,
             execute_rc_lost_action=execute_rc_lost_action,
+            takeoff_security_height=takeoff_security_height,
+            takeoff_ref_point=takeoff_ref_point,
+            takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
             global_transitional_speed=global_transitional_speed,
             drone_enum_value=drone_enum_value,
             drone_sub_enum_value=drone_sub_enum_value,
+            payload_enum_value=payload_enum_value,
+            payload_sub_enum_value=payload_sub_enum_value,
+            payload_position_index=payload_position_index,
+            template_id=template_id,
+            execute_height_mode=execute_height_mode,
+            auto_flight_speed=auto_flight_speed,
+            default_execute_height=default_execute_height,
+            default_waypoint_speed=default_waypoint_speed,
+            heading_mode=heading_mode,
+            gimbal_pitch_mode=gimbal_pitch_mode,
+            use_straight_line=use_straight_line,
         )
 
     if indent:
@@ -191,6 +361,7 @@ def serialize_template_kml(
 
 def save_template_kml(
     filepath: str | Path,
+    waypoints: Sequence[Any] | Any | None = None,
     author: str = "QGC4QGIS",
     create_time: int | None = None,
     update_time: int | None = None,
@@ -199,9 +370,23 @@ def save_template_kml(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
+    template_id: int = 0,
+    execute_height_mode: str = "relativeToStartPoint",
+    auto_flight_speed: float = 5.0,
+    default_execute_height: float = 50.0,
+    default_waypoint_speed: float = 5.0,
+    heading_mode: str = "followWayline",
+    gimbal_pitch_mode: str = "manual",
+    use_straight_line: int = 1,
     kml_root: ET.Element | None = None,
 ) -> None:
     """Serialize template.kml XML structure and write to file.
@@ -209,6 +394,7 @@ def save_template_kml(
     :param filepath: Output file path.
     """
     xml_str = serialize_template_kml(
+        waypoints=waypoints,
         author=author,
         create_time=create_time,
         update_time=update_time,
@@ -217,9 +403,23 @@ def save_template_kml(
         finish_action=finish_action,
         exit_on_rc_lost=exit_on_rc_lost,
         execute_rc_lost_action=execute_rc_lost_action,
+        takeoff_security_height=takeoff_security_height,
+        takeoff_ref_point=takeoff_ref_point,
+        takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
         global_transitional_speed=global_transitional_speed,
         drone_enum_value=drone_enum_value,
         drone_sub_enum_value=drone_sub_enum_value,
+        payload_enum_value=payload_enum_value,
+        payload_sub_enum_value=payload_sub_enum_value,
+        payload_position_index=payload_position_index,
+        template_id=template_id,
+        execute_height_mode=execute_height_mode,
+        auto_flight_speed=auto_flight_speed,
+        default_execute_height=default_execute_height,
+        default_waypoint_speed=default_waypoint_speed,
+        heading_mode=heading_mode,
+        gimbal_pitch_mode=gimbal_pitch_mode,
+        use_straight_line=use_straight_line,
         kml_root=kml_root,
     )
     path = Path(filepath)
@@ -263,7 +463,19 @@ def _parse_waypoint(
         getattr(
             wp,
             "executeHeight",
-            getattr(wp, "height", getattr(wp, "altitude", default_execute_height)),
+            getattr(
+                wp,
+                "execute_height",
+                getattr(
+                    wp,
+                    "height",
+                    getattr(
+                        wp,
+                        "altitude",
+                        getattr(wp, "alt", getattr(wp, "altura", default_execute_height)),
+                    ),
+                ),
+            ),
         )
     )
     speed = float(getattr(wp, "waypointSpeed", getattr(wp, "speed", default_waypoint_speed)))
@@ -347,9 +559,15 @@ def build_waylines_wpml(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
     heading_mode: str = "followWayline",
     heading_path_mode: str = "followBadArc",
     turn_mode: str = "toPointAndStopWithDiscontinuityCurvature",
@@ -385,9 +603,15 @@ def build_waylines_wpml(
             finish_action=finish_action,
             exit_on_rc_lost=exit_on_rc_lost,
             execute_rc_lost_action=execute_rc_lost_action,
+            takeoff_security_height=takeoff_security_height,
+            takeoff_ref_point=takeoff_ref_point,
+            takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
             global_transitional_speed=global_transitional_speed,
             drone_enum_value=drone_enum_value,
             drone_sub_enum_value=drone_sub_enum_value,
+            payload_enum_value=payload_enum_value,
+            payload_sub_enum_value=payload_sub_enum_value,
+            payload_position_index=payload_position_index,
         )
 
     doc.append(mission_config)
@@ -594,9 +818,15 @@ def serialize_waylines_wpml(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
     heading_mode: str = "followWayline",
     heading_path_mode: str = "followBadArc",
     turn_mode: str = "toPointAndStopWithDiscontinuityCurvature",
@@ -631,9 +861,15 @@ def serialize_waylines_wpml(
             finish_action=finish_action,
             exit_on_rc_lost=exit_on_rc_lost,
             execute_rc_lost_action=execute_rc_lost_action,
+            takeoff_security_height=takeoff_security_height,
+            takeoff_ref_point=takeoff_ref_point,
+            takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
             global_transitional_speed=global_transitional_speed,
             drone_enum_value=drone_enum_value,
             drone_sub_enum_value=drone_sub_enum_value,
+            payload_enum_value=payload_enum_value,
+            payload_sub_enum_value=payload_sub_enum_value,
+            payload_position_index=payload_position_index,
             heading_mode=heading_mode,
             heading_path_mode=heading_path_mode,
             turn_mode=turn_mode,
@@ -670,9 +906,15 @@ def save_waylines_wpml(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
     heading_mode: str = "followWayline",
     heading_path_mode: str = "followBadArc",
     turn_mode: str = "toPointAndStopWithDiscontinuityCurvature",
@@ -705,9 +947,15 @@ def save_waylines_wpml(
         finish_action=finish_action,
         exit_on_rc_lost=exit_on_rc_lost,
         execute_rc_lost_action=execute_rc_lost_action,
+        takeoff_security_height=takeoff_security_height,
+        takeoff_ref_point=takeoff_ref_point,
+        takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
         global_transitional_speed=global_transitional_speed,
         drone_enum_value=drone_enum_value,
         drone_sub_enum_value=drone_sub_enum_value,
+        payload_enum_value=payload_enum_value,
+        payload_sub_enum_value=payload_sub_enum_value,
+        payload_position_index=payload_position_index,
         heading_mode=heading_mode,
         heading_path_mode=heading_path_mode,
         turn_mode=turn_mode,
@@ -768,7 +1016,7 @@ def validate_wpml_route(
     if terrain_like_height_mode or (alt_mode is not None and alt_mode not in relative_modes):
         raise ValueError(
             "Exportação WPML aceita apenas altura relativa ao ponto de decolagem; "
-            "rota em modo terreno/absoluto não é suportada (D10)."
+            "converta a rota com rebase_route_to_takeoff() antes de exportar (D10)."
         )
 
     warnings: list[str] = []
@@ -783,6 +1031,12 @@ def validate_wpml_route(
         wp_list = list(waypoints)
     else:
         wp_list = []
+
+    le_zero_count = sum(1 for wp in wp_list if _parse_waypoint(wp)[2] <= 0)
+    if le_zero_count > 0:
+        warnings.append(
+            f"Altura relativa ≤ 0 em {le_zero_count} waypoint(s): a rota passa abaixo do ponto de decolagem."
+        )
 
     if max_waypoints > 0 and len(wp_list) > max_waypoints:
         warnings.append(
@@ -812,9 +1066,15 @@ def save_kmz(
     finish_action: str = "goHome",
     exit_on_rc_lost: str = "executeLostAction",
     execute_rc_lost_action: str = "goBack",
+    takeoff_security_height: float = 20.0,
+    takeoff_ref_point: tuple[float, float, float] | None = None,
+    takeoff_ref_point_agl_height: float = 0.0,
     global_transitional_speed: float = 5.0,
     drone_enum_value: int = DEFAULT_DRONE_ENUM_VALUE,
     drone_sub_enum_value: int = 0,
+    payload_enum_value: int = 0,
+    payload_sub_enum_value: int = 0,
+    payload_position_index: int = 0,
     heading_mode: str = "followWayline",
     heading_path_mode: str = "followBadArc",
     turn_mode: str = "toPointAndStopWithDiscontinuityCurvature",
@@ -853,6 +1113,7 @@ def save_kmz(
     )
 
     template_xml = serialize_template_kml(
+        waypoints=target_wps,
         author=author,
         create_time=create_time,
         update_time=update_time,
@@ -861,9 +1122,22 @@ def save_kmz(
         finish_action=finish_action,
         exit_on_rc_lost=exit_on_rc_lost,
         execute_rc_lost_action=execute_rc_lost_action,
+        takeoff_security_height=takeoff_security_height,
+        takeoff_ref_point=takeoff_ref_point,
+        takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
         global_transitional_speed=global_transitional_speed,
         drone_enum_value=drone_enum_value,
         drone_sub_enum_value=drone_sub_enum_value,
+        payload_enum_value=payload_enum_value,
+        payload_sub_enum_value=payload_sub_enum_value,
+        payload_position_index=payload_position_index,
+        template_id=template_id,
+        execute_height_mode=execute_height_mode,
+        auto_flight_speed=auto_flight_speed,
+        default_execute_height=default_execute_height,
+        default_waypoint_speed=default_waypoint_speed,
+        heading_mode=heading_mode,
+        use_straight_line=use_straight_line,
     )
 
     waylines_xml = serialize_waylines_wpml(
@@ -879,9 +1153,15 @@ def save_kmz(
         finish_action=finish_action,
         exit_on_rc_lost=exit_on_rc_lost,
         execute_rc_lost_action=execute_rc_lost_action,
+        takeoff_security_height=takeoff_security_height,
+        takeoff_ref_point=takeoff_ref_point,
+        takeoff_ref_point_agl_height=takeoff_ref_point_agl_height,
         global_transitional_speed=global_transitional_speed,
         drone_enum_value=drone_enum_value,
         drone_sub_enum_value=drone_sub_enum_value,
+        payload_enum_value=payload_enum_value,
+        payload_sub_enum_value=payload_sub_enum_value,
+        payload_position_index=payload_position_index,
         heading_mode=heading_mode,
         heading_path_mode=heading_path_mode,
         turn_mode=turn_mode,

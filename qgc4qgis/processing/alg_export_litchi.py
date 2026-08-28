@@ -12,6 +12,7 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterFileDestination,
     QgsProcessingParameterNumber,
+    QgsProcessingParameterPoint,
     QgsProcessingParameterRasterLayer,
 )
 
@@ -20,9 +21,9 @@ from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
 from qgc4qgis.core.geo import AEQDProjection
 from qgc4qgis.core.litchi import save_litchi_csv
 from qgc4qgis.core.missionitems import DistanceMode
-from qgc4qgis.core.route import route_from_transects
+from qgc4qgis.core.route import rebase_route_to_takeoff, route_from_transects
 from qgc4qgis.core.survey import generate_survey_transects
-from qgc4qgis.core.terrain import adjust_terrain_flight_path
+from qgc4qgis.core.terrain import adjust_terrain_flight_path, sample_terrain_point
 from qgc4qgis.processing.alg_survey_grid import extract_polygons
 
 
@@ -50,6 +51,7 @@ class ExportLitchiAlgorithm(QgsProcessingAlgorithm):
     WAYPOINT_WAIT = "WAYPOINT_WAIT"
     ELEVATION_LAYER = "ELEVATION_LAYER"
     TOLERANCE = "TOLERANCE"
+    TAKEOFF_POINT = "PONTO_DECOLAGEM"
     OUTPUT = "OUTPUT"
 
     def name(self) -> str:
@@ -296,6 +298,15 @@ class ExportLitchiAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
+            QgsProcessingParameterPoint(
+                self.TAKEOFF_POINT,
+                "Ponto de decolagem (opcional — padrão: primeiro waypoint)",
+                optional=True,
+                defaultValue=None,
+            )
+        )
+
+        self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT,
                 "Arquivo de destino (.csv)",
@@ -479,6 +490,25 @@ class ExportLitchiAlgorithm(QgsProcessingAlgorithm):
             wait_ms = int(waypoint_wait * 1000)
             for wp in route.waypoints:
                 wp.acoes.insert(0, {"actiontype": 0, "actionparam": wait_ms})
+
+        if terrain_mode:
+            takeoff_pt = self.parameterAsPoint(parameters, self.TAKEOFF_POINT, context, crs_wgs84)
+            if takeoff_pt is not None and not takeoff_pt.isEmpty():
+                lat, lon = takeoff_pt.y(), takeoff_pt.x()
+            elif route.waypoints:
+                lat, lon = route.waypoints[0].lat, route.waypoints[0].lon
+            else:
+                lat, lon = 0.0, 0.0
+
+            elev = sample_terrain_point(
+                elevation_layer, (lat, lon), transform_context=context.transformContext()
+            )
+            if elev is None:
+                raise QgsProcessingException(
+                    "Não foi possível amostrar a elevação no ponto de decolagem (fora do DEM ou NoData). Escolha outro ponto ou amplie o raster de elevação."
+                )
+
+            route = rebase_route_to_takeoff(route, elev)
 
         warnings = save_litchi_csv(
             output_file,

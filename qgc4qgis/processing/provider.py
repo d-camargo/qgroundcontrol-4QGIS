@@ -3,7 +3,9 @@
 from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 
+from qgc4qgis.processing.alg_download_dem import DownloadDemAlgorithm
 from qgc4qgis.processing.alg_export_dji import ExportDjiAlgorithm
+from qgc4qgis.processing.alg_export_kml import ExportLitchiKmlAlgorithm
 from qgc4qgis.processing.alg_export_litchi import ExportLitchiAlgorithm
 from qgc4qgis.processing.alg_export_plan import ExportPlanAlgorithm
 from qgc4qgis.processing.alg_photo_centers import PhotoCentersAlgorithm
@@ -30,5 +32,7 @@ class Qgc4QgisProvider(QgsProcessingProvider):
         self.addAlgorithm(SurveyGridAlgorithm())
         self.addAlgorithm(ExportPlanAlgorithm())
         self.addAlgorithm(ExportLitchiAlgorithm())
+        self.addAlgorithm(ExportLitchiKmlAlgorithm())
         self.addAlgorithm(ExportDjiAlgorithm())
         self.addAlgorithm(PhotoCentersAlgorithm())
+        self.addAlgorithm(DownloadDemAlgorithm())

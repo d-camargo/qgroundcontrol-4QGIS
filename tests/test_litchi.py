@@ -11,6 +11,7 @@ from qgc4qgis.core.litchi import (
     route_to_litchi_csv,
     route_to_litchi_rows,
     save_litchi_csv,
+    validate_litchi_route,
 )
 from qgc4qgis.core.missionitems import DistanceMode
 from qgc4qgis.core.route import Route, RouteWaypoint
@@ -174,13 +175,13 @@ def test_photo_interval_mutual_exclusion():
 
 
 def test_route_to_litchi_csv_and_save():
-    wp = RouteWaypoint(lat=10.0, lon=20.0, altura=30.0)
-    route = Route(waypoints=[wp])
+    wp = RouteWaypoint(lat=10.0, lon=20.0, altura=30.0, acoes=[{"actiontype": 1, "actionparam": 0}])
+    route = Route(waypoints=[wp], modo_disparo="POR_FOTO")
 
     csv_str = route_to_litchi_csv(route)
     reader = csv.DictReader(io.StringIO(csv_str))
     fieldnames = reader.fieldnames
-    assert fieldnames == get_litchi_headers(0)
+    assert fieldnames == get_litchi_headers(1)
     rows = list(reader)
     assert len(rows) == 1
     assert rows[0]["latitude"] == "10.0"
@@ -198,7 +199,7 @@ def test_route_to_litchi_csv_and_save():
 def test_save_litchi_csv_warnings():
     # 1. Test 100 waypoints limit warning (> 99)
     wps_100 = [RouteWaypoint(lat=10.0, lon=20.0, altura=50.0) for _ in range(100)]
-    route_100 = Route(waypoints=wps_100)
+    route_100 = Route(waypoints=wps_100, modo_disparo="POR_FOTO")
     with tempfile.TemporaryDirectory() as tmpdir:
         out_path = Path(tmpdir) / "route_100.csv"
         warnings = save_litchi_csv(out_path, route_100)
@@ -206,7 +207,7 @@ def test_save_litchi_csv_warnings():
 
     # 2. Test pitch out of range warning
     wp_invalid_pitch = RouteWaypoint(lat=10.0, lon=20.0, altura=50.0, gimbal_pitch=30.0)
-    route_pitch = Route(waypoints=[wp_invalid_pitch])
+    route_pitch = Route(waypoints=[wp_invalid_pitch], modo_disparo="POR_FOTO")
     with tempfile.TemporaryDirectory() as tmpdir:
         out_path = Path(tmpdir) / "route_pitch.csv"
         warnings = save_litchi_csv(out_path, route_pitch)
@@ -215,7 +216,7 @@ def test_save_litchi_csv_warnings():
     # 3. Test altitude out of range warning (-250m and 600m)
     wp_low_alt = RouteWaypoint(lat=10.0, lon=20.0, altura=-250.0)
     wp_high_alt = RouteWaypoint(lat=10.0, lon=20.0, altura=600.0)
-    route_alt = Route(waypoints=[wp_low_alt, wp_high_alt])
+    route_alt = Route(waypoints=[wp_low_alt, wp_high_alt], modo_disparo="POR_FOTO")
     with tempfile.TemporaryDirectory() as tmpdir:
         out_path = Path(tmpdir) / "route_alt.csv"
         warnings = save_litchi_csv(out_path, route_alt)
@@ -290,3 +291,37 @@ def test_modo_por_distancia_photo_intervals():
     rows = route_to_litchi_rows(route)
     assert rows[0]["photo_distinterval"] == 15.5
     assert rows[0]["photo_timeinterval"] == -1
+
+
+def test_validate_litchi_route_photo_action_warning():
+    # 1. Route with modo_disparo="POR_DISTANCIA" and acoes=[] produces the warning, and actiontype* col count is 0
+    wp1 = RouteWaypoint(lat=-23.5505, lon=-46.6333, altura=50.0, acoes=[])
+    route_dist = Route(waypoints=[wp1], modo_disparo="POR_DISTANCIA")
+
+    warnings_dist = validate_litchi_route(route_dist)
+    expected_warning = (
+        'Modo de disparo "POR_DISTANCIA": o CSV não traz ação "Take Photo" por waypoint '
+        "— os waypoints ficam só nas pontas dos transectos e a captura depende do intervalo "
+        "(photo_distinterval/photo_timeinterval). Para uma ação de foto em cada centro de foto, "
+        'use o modo de disparo "Por foto".'
+    )
+    assert expected_warning in warnings_dist
+
+    csv_dist = route_to_litchi_csv(route_dist)
+    header_dist = csv_dist.splitlines()[0].split(",")
+    action_cols_dist = [c for c in header_dist if c.startswith("actiontype")]
+    assert len(action_cols_dist) == 0
+
+    # 2. Route with modo_disparo="POR_FOTO" and acoes=[{"actiontype": 1, "actionparam": 0}] does NOT produce warning, and actiontype* col count is 1
+    wp2 = RouteWaypoint(
+        lat=-23.5505, lon=-46.6333, altura=50.0, acoes=[{"actiontype": 1, "actionparam": 0}]
+    )
+    route_foto = Route(waypoints=[wp2], modo_disparo="POR_FOTO")
+
+    warnings_foto = validate_litchi_route(route_foto)
+    assert expected_warning not in warnings_foto
+
+    csv_foto = route_to_litchi_csv(route_foto)
+    header_foto = csv_foto.splitlines()[0].split(",")
+    action_cols_foto = [c for c in header_foto if c.startswith("actiontype")]
+    assert len(action_cols_foto) == 1

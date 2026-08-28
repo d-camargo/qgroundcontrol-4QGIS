@@ -89,6 +89,26 @@ def validate_litchi_route(
                 f"Altitude ({wp.altura:.1f}m) no waypoint {i + 1} fora da faixa [{MIN_ALTITUDE:.1f}, {MAX_ALTITUDE:.1f}]."
             )
 
+    modo = getattr(route, "modo_disparo", getattr(route, "trigger_mode", ""))
+    if modo != "POR_FOTO":
+        has_photo_action = False
+        for wp in waypoints:
+            actions = wp.acoes if wp.acoes else []
+            for act in actions:
+                act_type = act.get("actiontype", act.get("type", act.get("action_type", -1)))
+                try:
+                    if int(act_type) == 1:
+                        has_photo_action = True
+                        break
+                except (ValueError, TypeError):
+                    pass
+            if has_photo_action:
+                break
+        if not has_photo_action:
+            warnings.append(
+                f'Modo de disparo "{modo}": o CSV não traz ação "Take Photo" por waypoint — os waypoints ficam só nas pontas dos transectos e a captura depende do intervalo (photo_distinterval/photo_timeinterval). Para uma ação de foto em cada centro de foto, use o modo de disparo "Por foto".'
+            )
+
     return warnings
 
 

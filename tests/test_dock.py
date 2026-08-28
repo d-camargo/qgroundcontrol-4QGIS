@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from qgis.core import QgsFeature, QgsField, QgsGeometry, QgsPointXY, QgsVectorLayer
 from qgis.PyQt.QtCore import QVariant
-from qgis.PyQt.QtWidgets import QScrollArea
+from qgis.PyQt.QtWidgets import QPushButton, QScrollArea
 
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME
 from qgc4qgis.gui.dock import QgcPlanningDockWidget
@@ -283,7 +283,11 @@ def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
     assert dock.spn_gimbal_pitch.value() == -90.0
     assert dock.spn_waypoint_wait.value() == 0.0
     assert dock.btn_export_litchi.text() == "Exportar Litchi (.csv)…"
-    assert dock.btn_export_dji.text() == "Exportar DJI Fly (.kmz)…"
+    assert dock.btn_export_kml.text() == "Exportar Litchi Hub clássico (.kml)…"
+    assert "flylitchi.com/hub" in dock.btn_export_kml.toolTip()
+    assert dock.btn_export_dji.text() == "Exportar DJI Fly / Litchi Hub 2 (.kmz)…"
+    assert "hub.flylitchi.com" in dock.btn_export_dji.toolTip()
+    assert "flylitchi.com/hub" in dock.btn_export_dji.toolTip()
 
     dock.cmb_layer.setLayer(layer)
     dock.cmb_trigger_mode.setCurrentIndex(1)
@@ -305,6 +309,14 @@ def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
     assert len(litchi_signals) == 1
     assert litchi_signals[0]["SPEED"] == 8.0
 
+    kml_signals = []
+    dock.kmlExported.connect(lambda p: kml_signals.append(p))
+    out_kml = str(tmp_path / "test_kml.kml")
+    res_kml = dock.export_kml(file_path=out_kml)
+    assert res_kml == out_kml
+    assert len(kml_signals) == 1
+    assert kml_signals[0]["SPEED"] == 8.0
+
     dji_signals = []
     dock.djiExported.connect(lambda p: dji_signals.append(p))
     out_kmz = str(tmp_path / "test_dji.kmz")
@@ -314,6 +326,25 @@ def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
     assert dji_signals[0]["GIMBAL_PITCH"] == -45.0
 
     QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_export_kml_button_and_without_layer(qgis_app, tmp_path, monkeypatch):
+    """Test dock.btn_export_kml properties and export_kml without a valid layer."""
+    from qgis.core import QgsProject
+    from qgis.PyQt.QtWidgets import QMessageBox
+
+    QgsProject.instance().removeAllMapLayers()
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(None)
+
+    assert hasattr(dock, "btn_export_kml")
+    assert isinstance(dock.btn_export_kml, QPushButton)
+    assert dock.btn_export_kml.text() == "Exportar Litchi Hub clássico (.kml)…"
+    assert "flylitchi.com/hub" in dock.btn_export_kml.toolTip()
+
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: None)
+    result = dock.export_kml(str(tmp_path / "m.kml"))
+    assert result is None
 
 
 def test_dock_widget_is_scrollable(qgis_app):
@@ -328,3 +359,34 @@ def test_dock_widget_is_scrollable(qgis_app):
     assert parent == dock.widget().widget()
 
     assert dock.minimumSizeHint().height() < dock.widget().widget().sizeHint().height()
+
+
+def test_dock_download_dem_button_and_without_layer(qgis_app, monkeypatch):
+    """Test dock.btn_download_dem exists, is QPushButton, is inside scroll area main_widget, and download_dem() without layer handles warning safely."""
+    from qgis.core import QgsProject
+    from qgis.PyQt.QtWidgets import QMessageBox
+
+    QgsProject.instance().removeAllMapLayers()
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(None)
+
+    assert hasattr(dock, "btn_download_dem")
+    assert isinstance(dock.btn_download_dem, QPushButton)
+    assert dock.btn_download_dem.text() == "Baixar DEM da área…"
+
+    scroll_main = dock.scroll_area.widget()
+    parent = dock.btn_download_dem.parent()
+    while parent is not None and parent != scroll_main:
+        parent = parent.parent()
+    assert parent == scroll_main
+
+    warning_called = False
+
+    def mock_warning(*args, **kwargs):
+        nonlocal warning_called
+        warning_called = True
+
+    monkeypatch.setattr(QMessageBox, "warning", mock_warning)
+
+    dock.download_dem()
+    assert warning_called

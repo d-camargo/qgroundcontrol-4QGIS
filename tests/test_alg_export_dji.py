@@ -12,10 +12,13 @@ from qgis.core import (
     QgsFeature,
     QgsGeometry,
     QgsPointXY,
+    QgsProcessingException,
+    QgsRasterLayer,
     QgsVectorLayer,
 )
 
 from qgc4qgis.core.wpml import KML_NS, WPML_NS
+from qgc4qgis.processing.alg_export_dji import ExportDjiAlgorithm
 from qgc4qgis.processing.provider import Qgc4QgisProvider
 
 
@@ -226,3 +229,132 @@ def test_export_dji_processing_run_custom_options(tmp_path):
     assert folder is not None
     placemarks = folder.findall(f"{{{KML_NS}}}Placemark")
     assert len(placemarks) > 0
+
+
+def create_sample_dem_layer(tmp_path) -> QgsRasterLayer:
+    """Create a synthetic WGS84 GeoTIFF DEM raster layer covering (lat=0, lon=0)."""
+    import numpy as np
+    from osgeo import gdal, osr
+
+    raster_file = str(tmp_path / "dem_sample.tif")
+    driver = gdal.GetDriverByName("GTiff")
+    ds = driver.Create(raster_file, 10, 10, 1, gdal.GDT_Float32)
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    ds.SetProjection(srs.ExportToWkt())
+    ds.SetGeoTransform([-0.01, 0.005, 0, 0.01, 0, -0.005])
+
+    band = ds.GetRasterBand(1)
+    band.SetNoDataValue(-9999.0)
+    data = np.full((10, 10), 100.0, dtype=np.float32)
+    band.WriteArray(data)
+    ds.FlushCache()
+    del band
+    ds = None
+
+    layer = QgsRasterLayer(raster_file, "dem_sample")
+    assert layer.isValid()
+    return layer
+
+
+def test_export_dji_takeoff_point_parameter_exists():
+    """Verify that PONTO_DECOLAGEM parameter exists in ExportDjiAlgorithm and is optional."""
+    alg = ExportDjiAlgorithm()
+    alg.initAlgorithm()
+    param = alg.parameterDefinition("PONTO_DECOLAGEM")
+    assert param is not None
+    assert bool(param.flags() & param.FlagOptional)
+
+
+def test_export_dji_with_elevation_layer_succeeds(tmp_path):
+    """Verify that exporting with an elevation layer does not raise D10 error and produces valid KMZ."""
+    input_layer = create_sample_polygon_layer()
+    dem_layer = create_sample_dem_layer(tmp_path)
+    output_kmz = str(tmp_path / "dji_mission_terrain.kmz")
+
+    params = {
+        "INPUT": input_layer,
+        "CAMERA": 0,
+        "ALTITUDE": 100.0,
+        "GSD": 0.0,
+        "OVERLAP_SIDE": 70.0,
+        "OVERLAP_FRONTAL": 70.0,
+        "ANGLE": 0.0,
+        "TURNAROUND": 0.0,
+        "ENTRY_LOCATION": 0,
+        "REFLY": False,
+        "TRIGGER_MODE": 0,
+        "SPEED": 5.0,
+        "GIMBAL_PITCH": -90.0,
+        "WAYPOINT_WAIT": 0.0,
+        "FINISH_ACTION": 0,
+        "RC_LOST_ACTION": 0,
+        "TRANSITIONAL_SPEED": 5.0,
+        "ZIP_LAYOUT": 0,
+        "ELEVATION_LAYER": dem_layer,
+        "TOLERANCE": 10.0,
+        "PONTO_DECOLAGEM": QgsPointXY(0.0005, 0.0005),
+        "OUTPUT": output_kmz,
+    }
+
+    result = processing.run("qgc4qgis:exportar_dji_kmz", params)
+    assert result["OUTPUT"] == output_kmz
+
+    kmz_path = Path(output_kmz)
+    assert kmz_path.exists()
+    assert kmz_path.stat().st_size > 0
+
+    with zipfile.ZipFile(kmz_path, "r") as zf:
+        namelist = zf.namelist()
+        assert "wpmz/template.kml" in namelist
+        assert "wpmz/waylines.wpml" in namelist
+
+        template_bytes = zf.read("wpmz/template.kml")
+        waylines_bytes = zf.read("wpmz/waylines.wpml")
+
+    template_root = ET.fromstring(template_bytes)
+    assert template_root.tag == f"{{{KML_NS}}}kml"
+
+    waylines_root = ET.fromstring(waylines_bytes)
+    assert waylines_root.tag == f"{{{KML_NS}}}kml"
+    folder = waylines_root.find(f"{{{KML_NS}}}Document/{f'{{{KML_NS}}}Folder'}")
+    assert folder is not None
+    placemarks = folder.findall(f"{{{KML_NS}}}Placemark")
+    assert len(placemarks) > 0
+
+
+def test_export_dji_takeoff_outside_dem_raises_exception(tmp_path):
+    """Verify that taking off outside DEM extent raises QgsProcessingException."""
+    input_layer = create_sample_polygon_layer()
+    dem_layer = create_sample_dem_layer(tmp_path)
+    output_kmz = str(tmp_path / "dji_mission_outside_dem.kmz")
+
+    params = {
+        "INPUT": input_layer,
+        "CAMERA": 0,
+        "ALTITUDE": 100.0,
+        "GSD": 0.0,
+        "OVERLAP_SIDE": 70.0,
+        "OVERLAP_FRONTAL": 70.0,
+        "ANGLE": 0.0,
+        "TURNAROUND": 0.0,
+        "ENTRY_LOCATION": 0,
+        "REFLY": False,
+        "TRIGGER_MODE": 0,
+        "SPEED": 5.0,
+        "GIMBAL_PITCH": -90.0,
+        "WAYPOINT_WAIT": 0.0,
+        "FINISH_ACTION": 0,
+        "RC_LOST_ACTION": 0,
+        "TRANSITIONAL_SPEED": 5.0,
+        "ZIP_LAYOUT": 0,
+        "ELEVATION_LAYER": dem_layer,
+        "TOLERANCE": 10.0,
+        "PONTO_DECOLAGEM": QgsPointXY(10.0, 10.0),
+        "OUTPUT": output_kmz,
+    }
+
+    with pytest.raises(
+        QgsProcessingException, match="Não foi possível amostrar a elevação no ponto de decolagem"
+    ):
+        processing.run("qgc4qgis:exportar_dji_kmz", params)

@@ -53,3 +53,20 @@ def test_plugin_metadata_file():
 
     icon_path = plugin_dir / general["icon"]
     assert icon_path.exists(), f"Icon file not found at {icon_path}"
+
+
+def test_plugin_version_matches_metadata():
+    """Verify Qgc4QgisPlugin.VERSION matches metadata.txt version and is not '0.0.0'."""
+    from qgc4qgis.plugin import Qgc4QgisPlugin
+
+    plugin_dir = Path(qgc4qgis.__file__).parent
+    metadata_path = plugin_dir / "metadata.txt"
+
+    config = configparser.ConfigParser()
+    config.optionxform = str
+    config.read(metadata_path, encoding="utf-8")
+
+    expected_version = config["general"]["version"]
+
+    assert expected_version == Qgc4QgisPlugin.VERSION
+    assert Qgc4QgisPlugin.VERSION != "0.0.0"

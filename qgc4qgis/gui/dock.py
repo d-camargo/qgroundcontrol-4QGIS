@@ -36,6 +36,7 @@ from qgis.PyQt.QtWidgets import (
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
+from qgc4qgis.core.elevation import ATTRIBUTION
 from qgc4qgis.core.route import route_from_transects
 from qgc4qgis.core.settings import load_project_settings, save_project_settings
 from qgc4qgis.core.stats import calculate_flight_stats, calculate_polygon_area
@@ -53,6 +54,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
     gridGenerated = pyqtSignal(dict)
     planExported = pyqtSignal(dict)
     litchiExported = pyqtSignal(dict)
+    kmlExported = pyqtSignal(dict)
     djiExported = pyqtSignal(dict)
 
     def __init__(self, parent: QWidget | None = None):
@@ -245,6 +247,10 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.cmb_elevation_layer.layerChanged.connect(self._on_grid_param_changed)
         lay_terrain.addRow("Camada de elevação:", self.cmb_elevation_layer)
 
+        self.btn_download_dem = QPushButton("Baixar DEM da área…", grp_terrain)
+        self.btn_download_dem.clicked.connect(self.download_dem)
+        lay_terrain.addRow(self.btn_download_dem)
+
         self.spn_tolerance = QDoubleSpinBox(grp_terrain)
         self.spn_tolerance.setRange(0.1, 1000.0)
         self.spn_tolerance.setValue(10.0)
@@ -328,7 +334,17 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.btn_export_litchi.clicked.connect(self.export_litchi)
         lay_export.addRow(self.btn_export_litchi)
 
-        self.btn_export_dji = QPushButton("Exportar DJI Fly (.kmz)…", grp_export)
+        self.btn_export_kml = QPushButton("Exportar Litchi Hub clássico (.kml)…", grp_export)
+        self.btn_export_kml.setToolTip(
+            'KML para flylitchi.com/hub → Import, com "Add take photo action" marcado. Não leva proa, gimbal nem velocidade — para isso use o .csv.'
+        )
+        self.btn_export_kml.clicked.connect(self.export_kml)
+        lay_export.addRow(self.btn_export_kml)
+
+        self.btn_export_dji = QPushButton("Exportar DJI Fly / Litchi Hub 2 (.kmz)…", grp_export)
+        self.btn_export_dji.setToolTip(
+            "KMZ WPML: abre no DJI Fly e é importado como missão pelo Litchi Hub 2 (hub.flylitchi.com → Importar missão). O hub clássico (flylitchi.com/hub) NÃO lê .kmz — para ele use o .csv ou o .kml."
+        )
         self.btn_export_dji.clicked.connect(self.export_dji)
         lay_export.addRow(self.btn_export_dji)
 
@@ -939,6 +955,53 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         return file_path
 
+    def export_kml(self, file_path: str | None = None) -> str | None:
+        """Export flight plan to a Litchi Mission Hub KML file via ExportLitchiKmlAlgorithm."""
+        params = self.get_parameters()
+        layer = params.get("INPUT")
+
+        if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
+            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            return None
+
+        if not file_path:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Exportar Litchi Mission Hub KML",
+                "",
+                "Litchi Mission Hub KML (*.kml);;Todos os Arquivos (*)",
+            )
+
+        if not file_path:
+            return None
+
+        proc_params = dict(params)
+        feat_id = proc_params.pop("FEATURE_ID", None)
+
+        if feat_id is not None:
+            layer.selectByIds([feat_id])
+            proc_params["INPUT"] = QgsProcessingFeatureSourceDefinition(
+                layer.id(), selectedFeaturesOnly=True
+            )
+        else:
+            proc_params["INPUT"] = layer
+
+        proc_params["OUTPUT"] = file_path
+        self.kmlExported.emit(proc_params)
+
+        try:
+            import processing
+
+            processing.run("qgc4qgis:exportar_litchi_kml", proc_params)
+        except QgsProcessingException as e:
+            if self.isVisible():
+                QMessageBox.critical(self, "Erro na exportação KML", str(e))
+        except Exception:
+            # Headless/standalone: processing framework unavailable
+            pass
+
+        return file_path
+
     def export_dji(self, file_path: str | None = None) -> str | None:
         """Export flight plan to a DJI Fly (.kmz) mission file via ExportDjiAlgorithm."""
         params = self.get_parameters()
@@ -1016,6 +1079,46 @@ class QgcPlanningDockWidget(QgsDockWidget):
                 processing.runAndLoadResults("qgc4qgis:gerar_grade_voo", proc_params)
             except AttributeError:
                 processing.run("qgc4qgis:gerar_grade_voo", proc_params)
+        except Exception:
+            # Standalone test or headless fallback
+            pass
+
+    def download_dem(self) -> None:
+        """Download Copernicus DEM for selected polygon layer extent and add to project."""
+        params = self.get_parameters()
+        layer = params.get("INPUT")
+
+        if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
+            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            return
+
+        try:
+            import processing
+
+            proc_params: dict[str, Any] = {}
+            feat_id = params.get("FEATURE_ID")
+
+            if feat_id is not None:
+                layer.selectByIds([feat_id])
+                proc_params["INPUT"] = QgsProcessingFeatureSourceDefinition(
+                    layer.id(), selectedFeaturesOnly=True
+                )
+            else:
+                proc_params["INPUT"] = layer
+
+            proc_params["OUTPUT"] = "TEMPORARY_OUTPUT"
+
+            res = processing.run("qgc4qgis:baixar_dem_copernicus", proc_params)
+            out_path = res.get("OUTPUT") if isinstance(res, dict) else None
+
+            if out_path:
+                dem_layer = QgsRasterLayer(out_path, "DEM Copernicus")
+                if dem_layer.isValid():
+                    meta = dem_layer.metadata()
+                    meta.setAbstract(ATTRIBUTION)
+                    dem_layer.setMetadata(meta)
+                    QgsProject.instance().addMapLayer(dem_layer)
+                    self.cmb_elevation_layer.setLayer(dem_layer)
         except Exception:
             # Standalone test or headless fallback
             pass

@@ -12,7 +12,9 @@ from qgis.core import (
 )
 
 from qgc4qgis.plugin import Qgc4QgisPlugin
+from qgc4qgis.processing.alg_download_dem import DownloadDemAlgorithm
 from qgc4qgis.processing.alg_export_dji import ExportDjiAlgorithm
+from qgc4qgis.processing.alg_export_kml import ExportLitchiKmlAlgorithm
 from qgc4qgis.processing.alg_export_litchi import ExportLitchiAlgorithm
 from qgc4qgis.processing.alg_export_plan import ExportPlanAlgorithm
 from qgc4qgis.processing.alg_photo_centers import PhotoCentersAlgorithm
@@ -28,12 +30,14 @@ def test_provider_metadata():
 
     provider.loadAlgorithms()
     algs = provider.algorithms()
-    assert len(algs) >= 5
+    assert len(algs) >= 7
     assert any(alg.name() == "gerar_grade_voo" for alg in algs)
     assert any(alg.name() == "exportar_plano_qgc" for alg in algs)
     assert any(alg.name() == "exportar_litchi_csv" for alg in algs)
+    assert any(alg.name() == "exportar_litchi_kml" for alg in algs)
     assert any(alg.name() == "exportar_dji_kmz" for alg in algs)
     assert any(alg.name() == "gerar_centros_foto" for alg in algs)
+    assert any(alg.name() == "baixar_dem_copernicus" for alg in algs)
 
 
 def test_plugin_processing_registration():
@@ -442,3 +446,45 @@ def test_export_dji_execution(tmp_path):
         assert (
             "<wpml:globalTransitionalSpeed>8.0</wpml:globalTransitionalSpeed>" in template_content
         )
+
+
+def test_export_litchi_kml_metadata():
+    """Verify ExportLitchiKmlAlgorithm metadata."""
+    alg = ExportLitchiKmlAlgorithm()
+    alg.initAlgorithm()
+
+    assert alg.name() == "exportar_litchi_kml"
+    assert alg.displayName() == "Exportar missão Litchi Mission Hub (.kml)"
+    assert alg.group() == "Planejamento de Voo"
+    assert alg.groupId() == "planejamento_voo"
+    assert alg.createInstance().name() == alg.name()
+    assert "flylitchi.com/hub" in alg.shortHelpString()
+
+    assert alg.parameterDefinition("INPUT") is not None
+    assert alg.parameterDefinition("OUTPUT") is not None
+
+    trig_param = alg.parameterDefinition("TRIGGER_MODE")
+    assert trig_param is not None
+    assert trig_param.defaultValue() == 2
+
+    assert alg.parameterDefinition("GIMBAL_PITCH") is None
+    assert alg.parameterDefinition("WAYPOINT_WAIT") is None
+    assert not hasattr(alg, "GIMBAL_PITCH")
+    assert not hasattr(alg, "WAYPOINT_WAIT")
+
+
+def test_download_dem_metadata():
+    """Verify DownloadDemAlgorithm metadata and parameters."""
+    alg = DownloadDemAlgorithm()
+    alg.initAlgorithm()
+
+    assert alg.name() == "baixar_dem_copernicus"
+    assert alg.displayName() == "Baixar DEM Copernicus da área"
+    assert alg.group() == "Planejamento de Voo"
+    assert alg.groupId() == "planejamento_voo"
+    assert alg.createInstance().name() == alg.name()
+    assert "Copernicus DEM (GLO-30)" in alg.shortHelpString()
+
+    assert alg.parameterDefinition("INPUT") is not None
+    assert alg.parameterDefinition("MARGEM") is not None
+    assert alg.parameterDefinition("OUTPUT") is not None

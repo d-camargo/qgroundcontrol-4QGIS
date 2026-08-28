@@ -1,4 +1,4 @@
-"""Processing algorithm to export a DJI Fly mission (.kmz) file."""
+"""Processing algorithm to export a Litchi Mission Hub KML (.kml) file."""
 
 from qgis.core import (
     QgsCoordinateReferenceSystem,
@@ -19,16 +19,16 @@ from qgis.core import (
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
 from qgc4qgis.core.geo import AEQDProjection
+from qgc4qgis.core.kml import save_litchi_kml
 from qgc4qgis.core.missionitems import DistanceMode
 from qgc4qgis.core.route import rebase_route_to_takeoff, route_from_transects
 from qgc4qgis.core.survey import generate_survey_transects
 from qgc4qgis.core.terrain import adjust_terrain_flight_path, sample_terrain_point
-from qgc4qgis.core.wpml import save_kmz
 from qgc4qgis.processing.alg_survey_grid import extract_polygons
 
 
-class ExportDjiAlgorithm(QgsProcessingAlgorithm):
-    """QGIS Processing Algorithm to export DJI Fly mission (.kmz) files."""
+class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
+    """QGIS Processing Algorithm to export Litchi Mission Hub KML (.kml) files."""
 
     INPUT = "INPUT"
     CAMERA = "CAMERA"
@@ -47,12 +47,6 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
     FOCAL_LENGTH = "FOCAL_LENGTH"
     TRIGGER_MODE = "TRIGGER_MODE"
     SPEED = "SPEED"
-    GIMBAL_PITCH = "GIMBAL_PITCH"
-    WAYPOINT_WAIT = "WAYPOINT_WAIT"
-    FINISH_ACTION = "FINISH_ACTION"
-    RC_LOST_ACTION = "RC_LOST_ACTION"
-    TRANSITIONAL_SPEED = "TRANSITIONAL_SPEED"
-    ZIP_LAYOUT = "ZIP_LAYOUT"
     ELEVATION_LAYER = "ELEVATION_LAYER"
     TOLERANCE = "TOLERANCE"
     TAKEOFF_POINT = "PONTO_DECOLAGEM"
@@ -60,11 +54,11 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
 
     def name(self) -> str:
         """Return unique algorithm name."""
-        return "exportar_dji_kmz"
+        return "exportar_litchi_kml"
 
     def displayName(self) -> str:
         """Return localized human-readable algorithm name."""
-        return "Exportar missão DJI Fly (.kmz)"
+        return "Exportar missão Litchi Mission Hub (.kml)"
 
     def group(self) -> str:
         """Return localized group name."""
@@ -74,15 +68,17 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         """Return unique group identifier."""
         return "planejamento_voo"
 
-    def createInstance(self) -> "ExportDjiAlgorithm":
+    def createInstance(self) -> "ExportLitchiKmlAlgorithm":
         """Create new instance of algorithm."""
-        return ExportDjiAlgorithm()
+        return ExportLitchiKmlAlgorithm()
 
     def shortHelpString(self) -> str:
         """Return short help text for algorithm GUI."""
         return (
-            "Exporta uma missão de voo no formato DJI WPML (.kmz) "
-            "a partir de polígonos de cobertura ou linhas de grade de voo."
+            "Exporta uma missão de voo no formato Litchi Mission Hub (.kml) "
+            "a partir de polígonos de cobertura ou linhas de grade de voo.\n\n"
+            "O arquivo KML gerado é destinado à importação no Litchi Mission Hub (flylitchi.com/hub -> Import).\n"
+            "Na janela de importação do Mission Hub, certifique-se de manter 'Add take photo action' MARCADO e 'Placemarks as POI' DESMARCADO."
         )
 
     def initAlgorithm(self, config=None) -> None:
@@ -262,69 +258,6 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
-            QgsProcessingParameterNumber(
-                self.GIMBAL_PITCH,
-                "Ângulo de gimbal (graus)",
-                QgsProcessingParameterNumber.Double,
-                defaultValue=-90.0,
-                minValue=-90.0,
-                maxValue=20.0,
-            )
-        )
-
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.WAYPOINT_WAIT,
-                "Espera no waypoint (s)",
-                QgsProcessingParameterNumber.Double,
-                defaultValue=0.0,
-                minValue=0.0,
-            )
-        )
-
-        self.addParameter(
-            QgsProcessingParameterEnum(
-                self.FINISH_ACTION,
-                "Ação ao terminar",
-                options=[
-                    "Retornar ao início (goHome)",
-                    "Nenhuma ação (noAction)",
-                    "Pouso automático (autoLand)",
-                    "Ir para primeiro waypoint (gotoFirstWaypoint)",
-                ],
-                defaultValue=0,
-            )
-        )
-
-        self.addParameter(
-            QgsProcessingParameterEnum(
-                self.RC_LOST_ACTION,
-                "Ação em perda de rádio",
-                options=["Retornar (goBack)", "Pousar (landing)", "Pairar (hover)"],
-                defaultValue=0,
-            )
-        )
-
-        self.addParameter(
-            QgsProcessingParameterNumber(
-                self.TRANSITIONAL_SPEED,
-                "Velocidade de transição (m/s)",
-                QgsProcessingParameterNumber.Double,
-                defaultValue=5.0,
-                minValue=0.1,
-            )
-        )
-
-        self.addParameter(
-            QgsProcessingParameterEnum(
-                self.ZIP_LAYOUT,
-                "Layout do arquivo KMZ (ZIP)",
-                options=["Subpasta wpmz/ (padrão DJI)", "Na raiz do arquivo"],
-                defaultValue=0,
-            )
-        )
-
-        self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.ELEVATION_LAYER,
                 "Camada de elevação (DEM) — se definida, exporta em modo acima do terreno",
@@ -355,13 +288,13 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT,
-                "Arquivo de destino (.kmz)",
-                fileFilter="DJI KMZ (*.kmz)",
+                "Arquivo de destino (.kml)",
+                fileFilter="Litchi Mission Hub KML (*.kml)",
             )
         )
 
     def processAlgorithm(self, parameters, context, feedback):
-        """Execute DJI Fly KMZ export algorithm logic."""
+        """Execute Litchi KML export algorithm logic."""
         source = self.parameterAsSource(parameters, self.INPUT, context)
         if source is None:
             raise QgsProcessingException(self.invalidSourceError(parameters, self.INPUT))
@@ -403,23 +336,9 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
 
         trigger_mode_idx = self.parameterAsEnum(parameters, self.TRIGGER_MODE, context)
         trigger_mode_map = {0: "POR_DISTANCIA", 1: "POR_TEMPO", 2: "POR_FOTO"}
-        trigger_mode_str = trigger_mode_map.get(trigger_mode_idx, "POR_DISTANCIA")
+        trigger_mode_str = trigger_mode_map.get(trigger_mode_idx, "POR_FOTO")
 
         speed = self.parameterAsDouble(parameters, self.SPEED, context)
-        gimbal_pitch = self.parameterAsDouble(parameters, self.GIMBAL_PITCH, context)
-        waypoint_wait = self.parameterAsDouble(parameters, self.WAYPOINT_WAIT, context)
-
-        finish_idx = self.parameterAsEnum(parameters, self.FINISH_ACTION, context)
-        finish_action_map = {0: "goHome", 1: "noAction", 2: "autoLand", 3: "gotoFirstWaypoint"}
-        finish_action_str = finish_action_map.get(finish_idx, "goHome")
-
-        rc_idx = self.parameterAsEnum(parameters, self.RC_LOST_ACTION, context)
-        rc_action_map = {0: "goBack", 1: "landing", 2: "hover"}
-        rc_action_str = rc_action_map.get(rc_idx, "goBack")
-
-        transitional_speed = self.parameterAsDouble(parameters, self.TRANSITIONAL_SPEED, context)
-        zip_layout_idx = self.parameterAsEnum(parameters, self.ZIP_LAYOUT, context)
-        in_wpmz_dir = zip_layout_idx == 0
 
         elevation_layer = self.parameterAsRasterLayer(parameters, self.ELEVATION_LAYER, context)
         terrain_mode = elevation_layer is not None and elevation_layer.isValid()
@@ -541,12 +460,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             trigger_mode=trigger_mode_str,
             distance_mode=distance_mode,
             flight_speed=speed,
-            gimbal_pitch=gimbal_pitch,
         )
-
-        if waypoint_wait > 0.0:
-            for wp in route.waypoints:
-                wp.wait_time = waypoint_wait
 
         if terrain_mode:
             takeoff_pt = self.parameterAsPoint(parameters, self.TAKEOFF_POINT, context, crs_wgs84)
@@ -566,38 +480,13 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
                 )
 
             route = rebase_route_to_takeoff(route, elev)
-            takeoff_ref_point = (lat, lon, elev)
-        else:
-            if route.waypoints:
-                lat, lon = route.waypoints[0].lat, route.waypoints[0].lon
-            else:
-                lat, lon = 0.0, 0.0
-            takeoff_ref_point = (lat, lon, 0.0)
 
-        try:
-            warnings = save_kmz(
-                filepath=output_file,
-                route=route,
-                in_wpmz_dir=in_wpmz_dir,
-                finish_action=finish_action_str,
-                exit_on_rc_lost="executeLostAction",
-                execute_rc_lost_action=rc_action_str,
-                global_transitional_speed=transitional_speed,
-                auto_flight_speed=speed,
-                default_execute_height=calc.distance_to_surface,
-                default_waypoint_speed=speed,
-                default_gimbal_pitch=gimbal_pitch,
-                trigger_mode=trigger_mode_str,
-                trigger_distance=trig_dist,
-                gimbal_pitch=gimbal_pitch,
-                distance_mode=route.modo_altitude,
-                takeoff_ref_point=takeoff_ref_point,
+        if trigger_mode_str != "POR_FOTO":
+            feedback.pushWarning(
+                'Modo de disparo diferente de "Por foto": o KML terá vértices só nas pontas dos transectos, e o "Add take photo action" do Mission Hub vai disparar apenas neles.'
             )
-        except ValueError as e:
-            raise QgsProcessingException(str(e)) from e
 
-        for warning in route.avisos:
-            feedback.pushWarning(warning)
+        warnings = save_litchi_kml(output_file, route)
 
         for warning in warnings:
             feedback.pushWarning(warning)

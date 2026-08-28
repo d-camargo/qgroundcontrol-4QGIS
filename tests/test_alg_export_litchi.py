@@ -11,9 +11,12 @@ from qgis.core import (
     QgsFeature,
     QgsGeometry,
     QgsPointXY,
+    QgsProcessingException,
+    QgsRasterLayer,
     QgsVectorLayer,
 )
 
+from qgc4qgis.processing.alg_export_litchi import ExportLitchiAlgorithm
 from qgc4qgis.processing.provider import Qgc4QgisProvider
 
 
@@ -166,3 +169,114 @@ def test_export_litchi_processing_run_options(tmp_path):
     assert float(first_row["speed(m/s)"]) == 6.0
     assert first_row["actiontype1"] == "0"
     assert float(first_row["actionparam1"]) == 2500.0
+
+
+def create_varying_dem_layer(tmp_path) -> QgsRasterLayer:
+    """Create a synthetic WGS84 GeoTIFF DEM raster layer with varying elevation across (lat=0, lon=0)."""
+    import numpy as np
+    from osgeo import gdal, osr
+
+    raster_file = str(tmp_path / "dem_varying_sample.tif")
+    driver = gdal.GetDriverByName("GTiff")
+    ds = driver.Create(raster_file, 10, 10, 1, gdal.GDT_Float32)
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    ds.SetProjection(srs.ExportToWkt())
+    ds.SetGeoTransform([-0.01, 0.005, 0, 0.01, 0, -0.005])
+
+    band = ds.GetRasterBand(1)
+    band.SetNoDataValue(-9999.0)
+    data = np.linspace(100.0, 200.0, 100, dtype=np.float32).reshape((10, 10))
+    band.WriteArray(data)
+    ds.FlushCache()
+    del band
+    ds = None
+
+    layer = QgsRasterLayer(raster_file, "dem_varying_sample")
+    assert layer.isValid()
+    return layer
+
+
+def test_export_litchi_takeoff_point_parameter_exists():
+    """Verify that PONTO_DECOLAGEM parameter exists in ExportLitchiAlgorithm and is optional."""
+    alg = ExportLitchiAlgorithm()
+    alg.initAlgorithm()
+    param = alg.parameterDefinition("PONTO_DECOLAGEM")
+    assert param is not None
+    assert bool(param.flags() & param.FlagOptional)
+
+
+def test_export_litchi_with_elevation_layer_relative_altitudes(tmp_path):
+    """Verify that exporting with elevation layer outputs altitudemode=0 and varying altitudes across waypoints."""
+    input_layer = create_sample_polygon_layer()
+    dem_layer = create_varying_dem_layer(tmp_path)
+    output_csv = str(tmp_path / "litchi_mission_elevation.csv")
+
+    params = {
+        "INPUT": input_layer,
+        "CAMERA": 0,
+        "ALTITUDE": 100.0,
+        "GSD": 0.0,
+        "OVERLAP_SIDE": 70.0,
+        "OVERLAP_FRONTAL": 70.0,
+        "ANGLE": 0.0,
+        "TURNAROUND": 0.0,
+        "ENTRY_LOCATION": 0,
+        "REFLY": False,
+        "TRIGGER_MODE": 0,
+        "SPEED": 5.0,
+        "GIMBAL_PITCH": -90.0,
+        "WAYPOINT_WAIT": 0.0,
+        "ELEVATION_LAYER": dem_layer,
+        "TOLERANCE": 10.0,
+        "OUTPUT": output_csv,
+    }
+
+    result = processing.run("qgc4qgis:exportar_litchi_csv", params)
+    assert result["OUTPUT"] == output_csv
+
+    with open(output_csv, encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+
+    assert len(rows) > 0
+    altitudes = []
+    for row in rows:
+        assert row["altitudemode"] == "0"
+        altitudes.append(float(row["altitude(m)"]))
+
+    # Confere que as alturas variam entre waypoints (o relevo continua sendo seguido)
+    assert len(set(altitudes)) > 1, f"Expected varying altitudes across waypoints, got {altitudes}"
+
+
+def test_export_litchi_takeoff_outside_dem_raises_exception(tmp_path):
+    """Verify that taking off outside DEM extent raises QgsProcessingException."""
+    input_layer = create_sample_polygon_layer()
+    dem_layer = create_varying_dem_layer(tmp_path)
+    output_csv = str(tmp_path / "litchi_mission_outside_dem.csv")
+
+    params = {
+        "INPUT": input_layer,
+        "CAMERA": 0,
+        "ALTITUDE": 100.0,
+        "GSD": 0.0,
+        "OVERLAP_SIDE": 70.0,
+        "OVERLAP_FRONTAL": 70.0,
+        "ANGLE": 0.0,
+        "TURNAROUND": 0.0,
+        "ENTRY_LOCATION": 0,
+        "REFLY": False,
+        "TRIGGER_MODE": 0,
+        "SPEED": 5.0,
+        "GIMBAL_PITCH": -90.0,
+        "WAYPOINT_WAIT": 0.0,
+        "ELEVATION_LAYER": dem_layer,
+        "TOLERANCE": 10.0,
+        "PONTO_DECOLAGEM": QgsPointXY(10.0, 10.0),
+        "OUTPUT": output_csv,
+    }
+
+    with pytest.raises(
+        QgsProcessingException, match="Não foi possível amostrar a elevação no ponto de decolagem"
+    ):
+        processing.run("qgc4qgis:exportar_litchi_csv", params)
