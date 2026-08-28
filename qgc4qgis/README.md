@@ -18,7 +18,7 @@ Copie ou crie um link simbólico da pasta `qgc4qgis` no diretório de plugins do
 - **Linux**:
   ```bash
   mkdir -p ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins
-  ln -s /caminho/para/qgroundcontrol-4qgis/qgis-plugin/qgc4qgis ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/qgc4qgis
+  ln -s /caminho/para/qgroundcontrol-4qgis/qgc4qgis ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/qgc4qgis
   ```
 - **Windows**:
   ```text

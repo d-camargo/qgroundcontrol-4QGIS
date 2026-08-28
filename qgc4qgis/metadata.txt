@@ -1,0 +1,18 @@
+[general]
+name=QGC4QGIS
+qgisMinimumVersion=3.34
+description=Plugin de integração do QGroundControl com o QGIS.
+about=Integração do QGroundControl com o QGIS para planejamento e gerenciamento de missões de UAV/drones.
+version=0.2.0
+author=Diego Camargo
+email=diegocamargo.bft@gmail.com
+homepage=https://github.com/d-camargo/qgroundcontrol-4QGIS
+tracker=https://github.com/d-camargo/qgroundcontrol-4QGIS/issues
+repository=https://github.com/d-camargo/qgroundcontrol-4QGIS
+icon=resources/icon.svg
+tags=uav, drone, mavlink, qgroundcontrol, mission planning
+category=Plugins
+experimental=False
+supportsQt6=True
+hasProcessingProvider=yes
+changelog=0.2.0: Atualização da versão para 0.2.0 e adição de metadados completos para o repositório oficial do QGIS.

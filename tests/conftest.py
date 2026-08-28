@@ -14,7 +14,7 @@ for path in QGIS_PLUGIN_PATHS:
     if os.path.exists(path) and path not in sys.path:
         sys.path.insert(0, path)
 
-# Ensure plugin directory is in sys.path
+# Ensure repository root directory is in sys.path
 PLUGIN_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PLUGIN_DIR not in sys.path:
     sys.path.insert(0, PLUGIN_DIR)

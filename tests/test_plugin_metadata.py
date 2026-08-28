@@ -1,6 +1,7 @@
 """Tests for qgc4qgis plugin initialization and metadata verification."""
 
 import configparser
+import re
 from pathlib import Path
 
 import qgc4qgis
@@ -32,7 +33,13 @@ def test_plugin_metadata_file():
         "about",
         "version",
         "author",
+        "email",
+        "tracker",
+        "homepage",
         "repository",
+        "icon",
+        "category",
+        "supportsQt6",
         "hasProcessingProvider",
     ]
 
@@ -40,6 +47,9 @@ def test_plugin_metadata_file():
         assert key in general, f"Missing required metadata key: {key}"
 
     assert general["name"] == "QGC4QGIS"
-    assert general["version"] == "0.1.0"
+    assert re.match(r"^\d+\.\d+\.\d+$", general["version"])
     assert general["qgisMinimumVersion"] == "3.34"
     assert general["hasProcessingProvider"] == "yes"
+
+    icon_path = plugin_dir / general["icon"]
+    assert icon_path.exists(), f"Icon file not found at {icon_path}"
