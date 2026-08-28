@@ -248,4 +248,11 @@ Conforme os termos de uso do provedor, a utilização dos dados do Copernicus DE
 
 ### 7. Compatibilidade com NumPy
 
-O download do DEM **não requer NumPy**, operando diretamente via Python e bindings nativos da GDAL. Com isso, a funcionalidade opera sem conflitos em ambientes com NumPy 2.x (como os QGIS 4 recentes), mesmo quando os bindings GDAL do ambiente foram compilados com NumPy 1.x.
+O download do DEM **não requer NumPy**, operando diretamente via Python e bindings nativos da GDAL. Com isso, a funcionalidade opera sem conflitos em ambientes com NumPy 2.x (como os QGIS 4 recentes), mesmo quando os bindings GDAL do ambiente foram compilados com NumPy 1.x. Desde a versão 0.6.1, o plugin também não importa os bindings GDAL ao ser carregado (import tardio, só no momento de gravar o DEM).
+
+### 8. Problemas Conhecidos
+
+- **Diálogo "A module that was compiled using NumPy 1.x…" ao instalar**:
+  Se o diálogo *"A module that was compiled using NumPy 1.x..."* aparecer **ao instalar** qualquer versão $\ge$ 0.6, a origem é outro componente do Python do QGIS — típico do QGIS em Flatpak com `numpy` 2.x instalado via `pip` em `/var/data/python/...`, que sombreia o `numpy` do runtime e quebra extensões compiladas contra o `numpy` antigo.
+  - **Correção de ambiente**: Remover esse `numpy` instalado via `pip` (o runtime volta a usar o `numpy` casado com seus binários), sem necessidade de fazer downgrade do NumPy.
+  - **Repositório oficial**: A instalação pelo repositório oficial exige que a versão nova esteja previamente publicada lá.

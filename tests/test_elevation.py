@@ -1,5 +1,6 @@
 """Tests for Copernicus DEM elevation provider core logic in qgc4qgis.core.elevation."""
 
+import re
 from pathlib import Path
 
 import pytest
@@ -214,3 +215,12 @@ def test_elevation_module_has_no_numpy_dependency():
     source_code = Path(elevation.__file__).read_text(encoding="utf-8")
     assert "numpy" not in source_code
     assert "WriteArray" not in source_code
+
+
+def test_elevation_module_does_not_import_osgeo_on_load():
+    """Verify qgc4qgis.core.elevation does not import osgeo or gdal at module level."""
+    source_code = Path(elevation.__file__).read_text(encoding="utf-8")
+    pattern = re.compile(r"^(from osgeo|import osgeo|import gdal|gdal\.UseExceptions)")
+    for line in source_code.splitlines():
+        assert not pattern.search(line)
+

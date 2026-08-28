@@ -4,7 +4,7 @@ qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=Plugin de integração do QGroundControl com o QGIS.
 about=Integração do QGroundControl com o QGIS para planejamento e gerenciamento de missões de UAV/drones.
-version=0.6.0
+version=0.6.1
 author=Diego Camargo
 email=diegocamargo.bft@gmail.com
 homepage=https://github.com/d-camargo/qgroundcontrol-4QGIS
@@ -16,7 +16,8 @@ category=Plugins
 experimental=False
 supportsQt6=True
 hasProcessingProvider=yes
-changelog=0.6.0: Compatibilidade declarada com QGIS 4.x (qgisMaximumVersion=4.99); download do DEM sem dependência de NumPy — corrige o erro "module compiled using NumPy 1.x" em ambientes QGIS 4 com NumPy 2.x.
+changelog=0.6.1: Carregamento do plugin sem importar os bindings GDAL (import tardio na gravação do DEM) — instalação imune a ambientes com NumPy 2.x onde gdal_array foi compilado contra NumPy 1.x; diagnóstico do diálogo de NumPy na instalação no README.
+    0.6.0: Compatibilidade declarada com QGIS 4.x (qgisMaximumVersion=4.99); download do DEM sem dependência de NumPy — corrige o erro "module compiled using NumPy 1.x" em ambientes QGIS 4 com NumPy 2.x.
     0.5.0: Download automático do DEM Copernicus (mesma fonte de elevação do QGroundControl) para a área de interesse, já carregado e selecionado no projeto.
     0.4.0: Exportação .kml para o Litchi Mission Hub clássico (flylitchi.com/hub), compatível com a opção "Add take photo action"; o exportador .csv agora avisa quando o modo de disparo não gera ação de foto por waypoint.
     0.3.0: Exportação WPML (.kmz) em modo terreno, convertida para altura relativa ao ponto de decolagem; template.kml completo com Folder de waypoint e ponto de decolagem; o mesmo .kmz é importado pelo Litchi Hub 2.

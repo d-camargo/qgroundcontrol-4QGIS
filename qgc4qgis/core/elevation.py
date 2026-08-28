@@ -2,19 +2,24 @@
 
 Data structures, URL formatting, tile grid partitioning, and response parsing
 for the Copernicus DEM elevation service hosted at terrain-ce.suite.auterion.com.
+
+GDAL e OSR (osgeo) são importados tardiamente, dentro das funções de escrita,
+para o carregamento do plugin não depender dos bindings GDAL (frágeis em ambientes
+com NumPy 2.x sombreado).
 """
 
 import json
 import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from osgeo import gdal, osr
 from qgis.core import QgsBlockingNetworkRequest
 from qgis.PyQt.QtCore import QUrl
 from qgis.PyQt.QtNetwork import QNetworkRequest
 
-gdal.UseExceptions()
+if TYPE_CHECKING:
+    from osgeo import gdal
 
 PROVIDER_URL: str = "https://terrain-ce.suite.auterion.com"
 CARPET_PATH: str = "/api/v1/carpet"
@@ -193,7 +198,7 @@ def parse_carpet(payload: dict) -> CarpetTile:
     )
 
 
-def carpet_to_dataset(tile: CarpetTile) -> gdal.Dataset:
+def carpet_to_dataset(tile: CarpetTile) -> "gdal.Dataset":
     """Create an in-memory GDAL Dataset (driver MEM) from a CarpetTile.
 
     Inverts rows (`tile.rows[::-1]`) because row 0 from API represents the south.
@@ -202,6 +207,9 @@ def carpet_to_dataset(tile: CarpetTile) -> gdal.Dataset:
     :param tile: CarpetTile instance containing elevation grid and geographic bounds.
     :return: In-memory GDAL Dataset object.
     """
+    from osgeo import gdal, osr
+
+    gdal.UseExceptions()
     driver = gdal.GetDriverByName("MEM")
     ds = driver.Create("", tile.n_cols, tile.n_rows, 1, gdal.GDT_Float32)
 
@@ -236,6 +244,9 @@ def build_dem_geotiff(tiles: Sequence[CarpetTile], out_path: str) -> str:
     :return: Output file path string `out_path`.
     :raises ValueError: If `tiles` sequence is empty.
     """
+    from osgeo import gdal
+
+    gdal.UseExceptions()
     if not tiles:
         raise ValueError("Tiles sequence cannot be empty")
 
