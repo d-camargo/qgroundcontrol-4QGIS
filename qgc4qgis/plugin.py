@@ -13,6 +13,11 @@ from qgc4qgis.processing.provider import Qgc4QgisProvider
 if TYPE_CHECKING:
     from qgc4qgis.gui.dock import QgcPlanningDockWidget
 
+try:
+    RIGHT_DOCK_WIDGET_AREA = Qt.DockWidgetArea.RightDockWidgetArea  # Qt6 (PyQt6)
+except AttributeError:
+    RIGHT_DOCK_WIDGET_AREA = Qt.RightDockWidgetArea  # Qt5 (PyQt5)
+
 
 class Qgc4QgisPlugin:
     """QGIS Plugin to integrate QGroundControl functionalities."""
@@ -75,7 +80,7 @@ class Qgc4QgisPlugin:
             from qgc4qgis.gui.dock import QgcPlanningDockWidget
 
             self.dock_widget = QgcPlanningDockWidget(self.iface.mainWindow())
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dock_widget)
+            self.iface.addDockWidget(RIGHT_DOCK_WIDGET_AREA, self.dock_widget)
 
         self.dock_widget.show()
         self.dock_widget.raise_()
