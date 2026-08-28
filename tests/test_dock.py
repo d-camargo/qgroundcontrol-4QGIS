@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 from qgis.core import QgsFeature, QgsField, QgsGeometry, QgsPointXY, QgsVectorLayer
 from qgis.PyQt.QtCore import QVariant
+from qgis.PyQt.QtWidgets import QScrollArea
 
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME
 from qgc4qgis.gui.dock import QgcPlanningDockWidget
@@ -313,3 +314,17 @@ def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
     assert dji_signals[0]["GIMBAL_PITCH"] == -45.0
 
     QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_widget_is_scrollable(qgis_app):
+    """Test dock widget scroll area container, widget hierarchy, and height constraints."""
+    dock = QgcPlanningDockWidget()
+    assert isinstance(dock.widget(), QScrollArea)
+    assert dock.widget().widgetResizable()
+
+    parent = dock.btn_generate.parent()
+    while parent is not None and parent != dock.widget().widget():
+        parent = parent.parent()
+    assert parent == dock.widget().widget()
+
+    assert dock.minimumSizeHint().height() < dock.widget().widget().sizeHint().height()

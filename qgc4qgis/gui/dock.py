@@ -21,12 +21,14 @@ from qgis.PyQt.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QRadioButton,
+    QScrollArea,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -38,6 +40,11 @@ from qgc4qgis.core.route import route_from_transects
 from qgc4qgis.core.settings import load_project_settings, save_project_settings
 from qgc4qgis.core.stats import calculate_flight_stats, calculate_polygon_area
 from qgc4qgis.gui.preview import FlightPreviewManager
+
+try:
+    NO_FRAME = QFrame.Shape.NoFrame  # Qt6 (PyQt6)
+except AttributeError:
+    NO_FRAME = QFrame.NoFrame  # Qt5 (PyQt5)
 
 
 class QgcPlanningDockWidget(QgsDockWidget):
@@ -65,7 +72,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
     def _init_ui(self) -> None:
         """Build layout and initialize widgets."""
-        main_widget = QWidget(self)
+        main_widget = QWidget()
         main_layout = QVBoxLayout(main_widget)
         main_layout.setContentsMargins(8, 8, 8, 8)
         main_layout.setSpacing(10)
@@ -341,7 +348,12 @@ class QgcPlanningDockWidget(QgsDockWidget):
         main_layout.addWidget(self.btn_add_layers)
 
         main_layout.addStretch()
-        self.setWidget(main_widget)
+
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(NO_FRAME)
+        self.scroll_area.setWidget(main_widget)
+        self.setWidget(self.scroll_area)
 
         # Inicializa a camada e cálculo inicial
         self._on_layer_changed()
