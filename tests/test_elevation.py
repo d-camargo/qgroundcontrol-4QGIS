@@ -1,8 +1,11 @@
 """Tests for Copernicus DEM elevation provider core logic in qgc4qgis.core.elevation."""
 
+from pathlib import Path
+
 import pytest
 from qgis.core import QgsRasterLayer
 
+from qgc4qgis.core import elevation
 from qgc4qgis.core.elevation import (
     CarpetTile,
     build_dem_geotiff,
@@ -204,3 +207,10 @@ def test_fetch_carpet_invalid_url():
     """Verify fetch_carpet raises RuntimeError when network request fails."""
     with pytest.raises(RuntimeError):
         fetch_carpet("http://invalid.domain.that.does.not.exist.12345/api")
+
+
+def test_elevation_module_has_no_numpy_dependency():
+    """Verify qgc4qgis.core.elevation has no dependency on numpy or WriteArray."""
+    source_code = Path(elevation.__file__).read_text(encoding="utf-8")
+    assert "numpy" not in source_code
+    assert "WriteArray" not in source_code

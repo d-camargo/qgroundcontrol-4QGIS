@@ -7,7 +7,7 @@ O **QGC4QGIS** é um complemento (*plugin*) para o QGIS que integra as funcional
 ## 1. Instalação
 
 ### Requisitos
-- **QGIS**: Versão 3.34 ou superior.
+- **QGIS**: versão 3.34 a 4.x.
 - **Python**: 3.9 ou superior (incluído nas distribuições standard do QGIS).
 
 ### Métodos de Instalação
@@ -246,3 +246,6 @@ Conforme os termos de uso do provedor, a utilização dos dados do Copernicus DE
 > **Convenção de Altitude Ortométrica:**  
 > As alturas fornecidas pelo Copernicus DEM são **ortométricas** (referenciadas ao modelo geoidal **EGM2008** — altitude acima do nível médio do mar), seguindo exatamente a mesma convenção adotada pelo QGroundControl. Elas **não devem ser confundidas com a altura elipsoidal** obtida diretamente por receptores GNSS/GPS sem aplicação do modelo geoidal.
 
+### 7. Compatibilidade com NumPy
+
+O download do DEM **não requer NumPy**, operando diretamente via Python e bindings nativos da GDAL. Com isso, a funcionalidade opera sem conflitos em ambientes com NumPy 2.x (como os QGIS 4 recentes), mesmo quando os bindings GDAL do ambiente foram compilados com NumPy 1.x.

@@ -5,10 +5,10 @@ for the Copernicus DEM elevation service hosted at terrain-ce.suite.auterion.com
 """
 
 import json
+import struct
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-import numpy as np
 from osgeo import gdal, osr
 from qgis.core import QgsBlockingNetworkRequest
 from qgis.PyQt.QtCore import QUrl
@@ -197,6 +197,7 @@ def carpet_to_dataset(tile: CarpetTile) -> gdal.Dataset:
     """Create an in-memory GDAL Dataset (driver MEM) from a CarpetTile.
 
     Inverts rows (`tile.rows[::-1]`) because row 0 from API represents the south.
+    Writes band using WriteRaster and struct (without NumPy — builds with gdal_array compiled against NumPy 1.x fail under NumPy 2.x).
 
     :param tile: CarpetTile instance containing elevation grid and geographic bounds.
     :return: In-memory GDAL Dataset object.
@@ -221,8 +222,8 @@ def carpet_to_dataset(tile: CarpetTile) -> gdal.Dataset:
     band = ds.GetRasterBand(1)
     band.SetNoDataValue(NODATA_VALUE)
 
-    data = np.array(tile.rows[::-1], dtype=np.float32)
-    band.WriteArray(data)
+    values = [value for row in tile.rows[::-1] for value in row]
+    band.WriteRaster(0, 0, tile.n_cols, tile.n_rows, struct.pack(f"={len(values)}f", *values))
 
     return ds
 

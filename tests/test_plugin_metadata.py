@@ -29,6 +29,7 @@ def test_plugin_metadata_file():
     required_keys = [
         "name",
         "qgisMinimumVersion",
+        "qgisMaximumVersion",
         "description",
         "about",
         "version",
@@ -49,6 +50,7 @@ def test_plugin_metadata_file():
     assert general["name"] == "QGC4QGIS"
     assert re.match(r"^\d+\.\d+\.\d+$", general["version"])
     assert general["qgisMinimumVersion"] == "3.34"
+    assert general["qgisMaximumVersion"] == "4.99"
     assert general["hasProcessingProvider"] == "yes"
 
     icon_path = plugin_dir / general["icon"]
