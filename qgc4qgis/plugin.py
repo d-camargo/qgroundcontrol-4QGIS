@@ -5,7 +5,7 @@ import os
 from typing import TYPE_CHECKING
 
 from qgis.core import QgsApplication
-from qgis.PyQt.QtCore import Qt
+from qgis.PyQt.QtCore import QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
@@ -61,10 +61,14 @@ class Qgc4QgisPlugin:
         icon = QIcon(icon_path)
 
         self.action = QAction(icon, self.NAME, self.iface.mainWindow())
-        self.action.setStatusTip(f"{self.NAME} - Versão {self.VERSION}")
+        self.action.setStatusTip(
+            QCoreApplication.translate("Qgc4QgisPlugin", "{name} - Version {version}").format(
+                name=self.NAME, version=self.VERSION
+            )
+        )
         self.action.triggered.connect(self.run)
 
-        # Adiciona a ação ao menu Vetor ▸ QGC4QGIS e à barra de ferramentas de vetor
+        # Add the action to the Vector ▸ QGC4QGIS menu and the vector toolbar
         self.iface.addPluginToVectorMenu(self.NAME, self.action)
         self.iface.addVectorToolBarIcon(self.action)
 
@@ -86,7 +90,7 @@ class Qgc4QgisPlugin:
             del self.action
 
     def run(self) -> None:
-        """Run method that shows or toggles the Planejamento QGC dock panel."""
+        """Run method that shows or toggles the QGC Flight Planning dock panel."""
         if self.dock_widget is None:
             from qgc4qgis.gui.dock import QgcPlanningDockWidget
 

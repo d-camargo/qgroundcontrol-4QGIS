@@ -355,6 +355,6 @@ def test_export_dji_takeoff_outside_dem_raises_exception(tmp_path):
     }
 
     with pytest.raises(
-        QgsProcessingException, match="Não foi possível amostrar a elevação no ponto de decolagem"
+        QgsProcessingException, match="Could not sample elevation at the takeoff point"
     ):
         processing.run("qgc4qgis:exportar_dji_kmz", params)

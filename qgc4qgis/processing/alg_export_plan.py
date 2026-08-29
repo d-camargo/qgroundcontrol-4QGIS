@@ -14,6 +14,7 @@ from qgis.core import (
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterLayer,
 )
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
@@ -32,6 +33,10 @@ from qgc4qgis.processing.alg_survey_grid import extract_polygons
 
 class ExportPlanAlgorithm(QgsProcessingAlgorithm):
     """QGIS Processing Algorithm to export QGroundControl (.plan) files."""
+
+    def tr(self, string: str) -> str:
+        """Return the translated string using the class context."""
+        return QCoreApplication.translate("ExportPlanAlgorithm", string)
 
     INPUT = "INPUT"
     CAMERA = "CAMERA"
@@ -62,11 +67,11 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
 
     def displayName(self) -> str:
         """Return localized human-readable algorithm name."""
-        return "Exportar plano do QGC (.plan)"
+        return self.tr("Export QGC plan (.plan)")
 
     def group(self) -> str:
         """Return localized group name."""
-        return "Planejamento de Voo"
+        return self.tr("Flight Planning")
 
     def groupId(self) -> str:
         """Return unique group identifier."""
@@ -78,9 +83,9 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:
         """Return short help text for algorithm GUI."""
-        return (
-            "Exporta um plano de missão no formato QGroundControl (.plan) "
-            "a partir de polígonos de cobertura ou linhas de grade de voo."
+        return self.tr(
+            "Exports a mission plan in QGroundControl format (.plan) "
+            "from coverage polygons or flight grid lines."
         )
 
     def initAlgorithm(self, config=None) -> None:
@@ -91,7 +96,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                "Camada de entrada (Polígonos ou Linhas)",
+                self.tr("Input layer (Polygons or Lines)"),
                 [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
             )
         )
@@ -99,7 +104,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.CAMERA,
-                "Câmera",
+                self.tr("Camera"),
                 options=camera_names,
                 defaultValue=0,
             )
@@ -108,7 +113,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
-                "Altura de voo (m)",
+                self.tr("Flight altitude (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=100.0,
                 minValue=0.0,
@@ -118,7 +123,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.GSD,
-                "GSD (cm/px) - se > 0 sobrescreve/calcula altura",
+                self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -128,7 +133,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
-                "Sobreposição lateral (%)",
+                self.tr("Side overlap (%)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=70.0,
                 minValue=0.0,
@@ -139,7 +144,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
-                "Sobreposição frontal (%)",
+                self.tr("Frontal overlap (%)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=70.0,
                 minValue=0.0,
@@ -150,7 +155,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ANGLE,
-                "Ângulo da grade (graus)",
+                self.tr("Grid angle (degrees)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
@@ -161,7 +166,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
-                "Distância de turnaround (m)",
+                self.tr("Turnaround distance (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -171,7 +176,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.ENTRY_LOCATION,
-                "Ponto de entrada",
+                self.tr("Entry point"),
                 options=["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"],
                 defaultValue=0,
             )
@@ -180,7 +185,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.REFLY,
-                "Grade cruzada (Refly 90°)",
+                self.tr("Cross grid (Refly 90°)"),
                 defaultValue=False,
             )
         )
@@ -188,7 +193,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
-                "Câmera manual: Largura do sensor (mm)",
+                self.tr("Manual camera: Sensor width (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=35.9,
                 minValue=0.0,
@@ -199,7 +204,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
-                "Câmera manual: Altura do sensor (mm)",
+                self.tr("Manual camera: Sensor height (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=24.0,
                 minValue=0.0,
@@ -210,7 +215,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
-                "Câmera manual: Largura da imagem (px)",
+                self.tr("Manual camera: Image width (px)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=7952,
                 minValue=0,
@@ -221,7 +226,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
-                "Câmera manual: Altura da imagem (px)",
+                self.tr("Manual camera: Image height (px)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=5304,
                 minValue=0,
@@ -232,7 +237,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
-                "Câmera manual: Distância focal (mm)",
+                self.tr("Manual camera: Focal length (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=35.0,
                 minValue=0.0,
@@ -243,7 +248,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.CRUISE_SPEED,
-                "Velocidade de cruzeiro (m/s)",
+                self.tr("Cruise speed (m/s)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=15.0,
                 minValue=0.1,
@@ -253,7 +258,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.HOVER_SPEED,
-                "Velocidade de pairar (m/s)",
+                self.tr("Hover speed (m/s)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=5.0,
                 minValue=0.1,
@@ -263,7 +268,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.FIRMWARE_TYPE,
-                "Tipo de Firmware",
+                self.tr("Firmware Type"),
                 options=["PX4 (12)", "ArduPilot (3)"],
                 defaultValue=0,
             )
@@ -272,8 +277,8 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.VEHICLE_TYPE,
-                "Tipo de Veículo",
-                options=["Multirotor (2)", "Asa Fixa (1)", "VTOL (19)"],
+                self.tr("Vehicle Type"),
+                options=["Multirotor (2)", self.tr("Fixed Wing (1)"), "VTOL (19)"],
                 defaultValue=0,
             )
         )
@@ -281,7 +286,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.ELEVATION_LAYER,
-                "Camada de elevação (DEM) — se definida, exporta em modo acima do terreno",
+                self.tr("Elevation layer (DEM) — if set, exports in above-terrain mode"),
                 optional=True,
                 defaultValue=None,
             )
@@ -290,7 +295,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
-                "Tolerância do terreno (m)",
+                self.tr("Terrain tolerance (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=10.0,
                 minValue=0.1,
@@ -300,7 +305,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT,
-                "Arquivo de destino (.plan)",
+                self.tr("Output file (.plan)"),
                 fileFilter="QGroundControl Plan (*.plan);;JSON (*.json)",
             )
         )
@@ -313,7 +318,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
 
         output_file = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
         if not output_file:
-            raise QgsProcessingException("Caminho do arquivo de saída não especificado.")
+            raise QgsProcessingException(self.tr("Output file path not specified."))
 
         camera_idx = self.parameterAsEnum(parameters, self.CAMERA, context)
         cameras = load_cameras()
@@ -371,7 +376,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
         )
 
         if not calc.recalculate():
-            raise QgsProcessingException("Falha ao calcular os parâmetros da câmera/voo.")
+            raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         crs_wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         source_crs = source.sourceCrs()

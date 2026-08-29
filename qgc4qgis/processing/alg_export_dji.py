@@ -15,6 +15,7 @@ from qgis.core import (
     QgsProcessingParameterPoint,
     QgsProcessingParameterRasterLayer,
 )
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
@@ -29,6 +30,10 @@ from qgc4qgis.processing.alg_survey_grid import extract_polygons
 
 class ExportDjiAlgorithm(QgsProcessingAlgorithm):
     """QGIS Processing Algorithm to export DJI Fly mission (.kmz) files."""
+
+    def tr(self, string: str) -> str:
+        """Return the translated string using the class context."""
+        return QCoreApplication.translate("ExportDjiAlgorithm", string)
 
     INPUT = "INPUT"
     CAMERA = "CAMERA"
@@ -64,11 +69,11 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
 
     def displayName(self) -> str:
         """Return localized human-readable algorithm name."""
-        return "Exportar missão DJI Fly (.kmz)"
+        return self.tr("Export DJI Fly mission (.kmz)")
 
     def group(self) -> str:
         """Return localized group name."""
-        return "Planejamento de Voo"
+        return self.tr("Flight Planning")
 
     def groupId(self) -> str:
         """Return unique group identifier."""
@@ -80,9 +85,9 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:
         """Return short help text for algorithm GUI."""
-        return (
-            "Exporta uma missão de voo no formato DJI WPML (.kmz) "
-            "a partir de polígonos de cobertura ou linhas de grade de voo."
+        return self.tr(
+            "Exports a flight mission in DJI WPML format (.kmz) "
+            "from coverage polygons or flight grid lines."
         )
 
     def initAlgorithm(self, config=None) -> None:
@@ -93,7 +98,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                "Camada de entrada (Polígonos ou Linhas)",
+                self.tr("Input layer (Polygons or Lines)"),
                 [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
             )
         )
@@ -101,7 +106,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.CAMERA,
-                "Câmera",
+                self.tr("Camera"),
                 options=camera_names,
                 defaultValue=0,
             )
@@ -110,7 +115,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
-                "Altura de voo (m)",
+                self.tr("Flight altitude (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=100.0,
                 minValue=0.0,
@@ -120,7 +125,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.GSD,
-                "GSD (cm/px) - se > 0 sobrescreve/calcula altura",
+                self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -130,7 +135,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
-                "Sobreposição lateral (%)",
+                self.tr("Side overlap (%)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=70.0,
                 minValue=0.0,
@@ -141,7 +146,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
-                "Sobreposição frontal (%)",
+                self.tr("Frontal overlap (%)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=70.0,
                 minValue=0.0,
@@ -152,7 +157,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ANGLE,
-                "Ângulo da grade (graus)",
+                self.tr("Grid angle (degrees)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
@@ -163,7 +168,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
-                "Distância de turnaround (m)",
+                self.tr("Turnaround distance (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -173,7 +178,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.ENTRY_LOCATION,
-                "Ponto de entrada",
+                self.tr("Entry point"),
                 options=["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"],
                 defaultValue=0,
             )
@@ -182,7 +187,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.REFLY,
-                "Grade cruzada (Refly 90°)",
+                self.tr("Cross grid (Refly 90°)"),
                 defaultValue=False,
             )
         )
@@ -190,7 +195,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
-                "Câmera manual: Largura do sensor (mm)",
+                self.tr("Manual camera: Sensor width (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=35.9,
                 minValue=0.0,
@@ -201,7 +206,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
-                "Câmera manual: Altura do sensor (mm)",
+                self.tr("Manual camera: Sensor height (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=24.0,
                 minValue=0.0,
@@ -212,7 +217,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
-                "Câmera manual: Largura da imagem (px)",
+                self.tr("Manual camera: Image width (px)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=7952,
                 minValue=0,
@@ -223,7 +228,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
-                "Câmera manual: Altura da imagem (px)",
+                self.tr("Manual camera: Image height (px)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=5304,
                 minValue=0,
@@ -234,7 +239,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
-                "Câmera manual: Distância focal (mm)",
+                self.tr("Manual camera: Focal length (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=35.0,
                 minValue=0.0,
@@ -245,8 +250,8 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.TRIGGER_MODE,
-                "Modo de disparo",
-                options=["Por distância", "Por tempo", "Por foto"],
+                self.tr("Trigger mode"),
+                options=[self.tr("By distance"), self.tr("By time"), self.tr("By photo")],
                 defaultValue=2,
             )
         )
@@ -254,7 +259,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SPEED,
-                "Velocidade (m/s)",
+                self.tr("Speed (m/s)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=5.0,
                 minValue=0.1,
@@ -264,7 +269,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.GIMBAL_PITCH,
-                "Ângulo de gimbal (graus)",
+                self.tr("Gimbal angle (degrees)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=-90.0,
                 minValue=-90.0,
@@ -275,7 +280,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.WAYPOINT_WAIT,
-                "Espera no waypoint (s)",
+                self.tr("Wait at waypoint (s)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -285,12 +290,12 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.FINISH_ACTION,
-                "Ação ao terminar",
+                self.tr("Action on finish"),
                 options=[
-                    "Retornar ao início (goHome)",
-                    "Nenhuma ação (noAction)",
-                    "Pouso automático (autoLand)",
-                    "Ir para primeiro waypoint (gotoFirstWaypoint)",
+                    self.tr("Return to home (goHome)"),
+                    self.tr("No action (noAction)"),
+                    self.tr("Auto land (autoLand)"),
+                    self.tr("Go to first waypoint (gotoFirstWaypoint)"),
                 ],
                 defaultValue=0,
             )
@@ -299,8 +304,12 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.RC_LOST_ACTION,
-                "Ação em perda de rádio",
-                options=["Retornar (goBack)", "Pousar (landing)", "Pairar (hover)"],
+                self.tr("Action on RC signal lost"),
+                options=[
+                    self.tr("Return (goBack)"),
+                    self.tr("Land (landing)"),
+                    self.tr("Hover (hover)"),
+                ],
                 defaultValue=0,
             )
         )
@@ -308,7 +317,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TRANSITIONAL_SPEED,
-                "Velocidade de transição (m/s)",
+                self.tr("Transitional speed (m/s)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=5.0,
                 minValue=0.1,
@@ -318,8 +327,8 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.ZIP_LAYOUT,
-                "Layout do arquivo KMZ (ZIP)",
-                options=["Subpasta wpmz/ (padrão DJI)", "Na raiz do arquivo"],
+                self.tr("KMZ (ZIP) file layout"),
+                options=[self.tr("wpmz/ subfolder (DJI default)"), self.tr("At file root")],
                 defaultValue=0,
             )
         )
@@ -327,7 +336,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.ELEVATION_LAYER,
-                "Camada de elevação (DEM) — se definida, exporta em modo acima do terreno",
+                self.tr("Elevation layer (DEM) — if set, exports in above-terrain mode"),
                 optional=True,
                 defaultValue=None,
             )
@@ -336,7 +345,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
-                "Tolerância do terreno (m)",
+                self.tr("Terrain tolerance (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=10.0,
                 minValue=0.1,
@@ -346,7 +355,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterPoint(
                 self.TAKEOFF_POINT,
-                "Ponto de decolagem (opcional — padrão: primeiro waypoint)",
+                self.tr("Takeoff point (optional — default: first waypoint)"),
                 optional=True,
                 defaultValue=None,
             )
@@ -355,7 +364,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT,
-                "Arquivo de destino (.kmz)",
+                self.tr("Output file (.kmz)"),
                 fileFilter="DJI KMZ (*.kmz)",
             )
         )
@@ -368,7 +377,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
 
         output_file = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
         if not output_file:
-            raise QgsProcessingException("Caminho do arquivo de saída não especificado.")
+            raise QgsProcessingException(self.tr("Output file path not specified."))
 
         camera_idx = self.parameterAsEnum(parameters, self.CAMERA, context)
         cameras = load_cameras()
@@ -437,7 +446,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
         )
 
         if not calc.recalculate():
-            raise QgsProcessingException("Falha ao calcular os parâmetros da câmera/voo.")
+            raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         crs_wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         source_crs = source.sourceCrs()
@@ -562,7 +571,10 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             )
             if elev is None:
                 raise QgsProcessingException(
-                    "Não foi possível amostrar a elevação no ponto de decolagem (fora do DEM ou NoData). Escolha outro ponto ou amplie o raster de elevação."
+                    self.tr(
+                        "Could not sample elevation at the takeoff point (outside the DEM "
+                        "or NoData). Choose another point or expand the elevation raster."
+                    )
                 )
 
             route = rebase_route_to_takeoff(route, elev)

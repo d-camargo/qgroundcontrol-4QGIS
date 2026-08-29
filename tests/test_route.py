@@ -199,7 +199,7 @@ def test_route_200m_square_por_distancia_and_por_foto() -> None:
         geo_transects, trigger_mode="POR_FOTO", trigger_distance=trigger, max_waypoints=15
     )
     assert len(route_warn.warnings) == 1
-    assert "excede o limite" in route_warn.warnings[0]
+    assert "exceeds the limit" in route_warn.warnings[0]
 
 
 def test_rebase_route_to_takeoff_calc_above_terrain() -> None:
@@ -249,8 +249,8 @@ def test_rebase_route_to_takeoff_calc_above_terrain() -> None:
     assert len(rebased.avisos) == 2
     assert rebased.avisos[0] == "Aviso original"
     assert rebased.avisos[1] == (
-        "Modo terreno convertido para altura relativa ao ponto de decolagem "
-        "(elevação 60.0 m); alturas de 50.0 m a 70.0 m."
+        "Terrain mode converted to height relative to the takeoff point "
+        "(elevation 60.0 m); heights from 50.0 m to 70.0 m."
     )
     assert rebased.waypoints[0].velocidade == 10.0
     assert rebased.waypoints[0].heading == 90.0
@@ -295,7 +295,7 @@ def test_rebase_route_to_takeoff_negative_altitude_warning() -> None:
     assert rebased.modo_altitude == DistanceMode.RELATIVE
     assert len(rebased.avisos) == 2
     assert rebased.avisos[1] == (
-        "Altura relativa ≤ 0 em 2 waypoint(s): a rota passa abaixo do ponto de decolagem."
+        "Relative height ≤ 0 in 2 waypoint(s): the route goes below the takeoff point."
     )
 
 

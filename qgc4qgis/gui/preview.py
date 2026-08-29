@@ -9,6 +9,7 @@ from qgis.core import (
     QgsProject,
     QgsVectorLayer,
 )
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgc4qgis.processing.alg_survey_grid import SurveyGridAlgorithm
 
@@ -53,7 +54,9 @@ class FlightPreviewManager:
         crs_auth = layer.crs().authid() or "EPSG:4326"
 
         area_layer = QgsVectorLayer(
-            f"Polygon?crs={crs_auth}", "Pré-visualização - Área de Voo", "memory"
+            f"Polygon?crs={crs_auth}",
+            QCoreApplication.translate("FlightPreviewManager", "Preview - Flight Area"),
+            "memory",
         )
         provider = area_layer.dataProvider()
 
@@ -124,7 +127,9 @@ class FlightPreviewManager:
             if alg.OUTPUT in results:
                 line_layer = context.getMapLayer(results[alg.OUTPUT])
                 if line_layer is not None and line_layer.isValid():
-                    line_layer.setName("Pré-visualização - Linhas de Voo")
+                    line_layer.setName(
+                        QCoreApplication.translate("FlightPreviewManager", "Preview - Flight Lines")
+                    )
                     if project is not None:
                         project.addMapLayer(line_layer)
                         self.line_layer_id = line_layer.id()

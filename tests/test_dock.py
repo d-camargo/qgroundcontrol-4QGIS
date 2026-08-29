@@ -36,7 +36,7 @@ def create_sample_polygon_layer() -> QgsVectorLayer:
 def test_dock_widget_initialization(qgis_app):
     """Test dock widget title, object name, and default controls state."""
     dock = QgcPlanningDockWidget()
-    assert dock.windowTitle() == "Planejamento QGC"
+    assert dock.windowTitle() == "QGC Flight Planning"
     assert dock.objectName() == "QgcPlanningDockWidget"
     assert dock.rad_mode_altitude.isChecked()
     assert dock.spn_altitude.isEnabled()
@@ -114,7 +114,7 @@ def test_layer_and_feature_selection(qgis_app):
     dock._on_layer_changed()
 
     assert dock.cmb_feature.count() == 2
-    assert dock.cmb_feature.itemText(0) == "Todas as feições"
+    assert dock.cmb_feature.itemText(0) == "All features"
     assert dock.cmb_feature.itemData(0) is None
     assert "Area 1" in dock.cmb_feature.itemText(1)
 
@@ -168,15 +168,15 @@ def test_plugin_gui_dock_lifecycle(qgis_app):
 
 
 def test_export_plan_and_add_layers_buttons(qgis_app, tmp_path):
-    """Test 'Exportar .plan...' and 'Adicionar camadas ao projeto' buttons and handlers."""
+    """Test 'Export .plan...' and 'Add layers to project' buttons and handlers."""
     from qgis.core import QgsProject
 
     layer = create_sample_polygon_layer()
     QgsProject.instance().addMapLayer(layer)
 
     dock = QgcPlanningDockWidget()
-    assert dock.btn_export_plan.text() == "Exportar .plan…"
-    assert dock.btn_add_layers.text() == "Adicionar camadas ao projeto"
+    assert dock.btn_export_plan.text() == "Export .plan…"
+    assert dock.btn_add_layers.text() == "Add layers to project"
 
     dock.cmb_layer.setLayer(layer)
 
@@ -263,15 +263,15 @@ def test_dock_waypoint_statistics_and_limits(qgis_app):
     wp_qgc = int(dock.lbl_stat_wp_qgc.text())
     assert wp_qgc > 99
 
-    assert "excede limite: 99" in dock.lbl_stat_wp_litchi.text()
-    assert "Litchi (99)" in dock.lbl_stat_warning.text()
+    assert "exceeds limit: 99" in dock.lbl_stat_wp_litchi.text()
+    assert "Litchi limit (99)" in dock.lbl_stat_warning.text()
     assert not dock.lbl_stat_warning.isHidden()
 
     QgsProject.instance().removeMapLayer(layer)
 
 
 def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
-    """Test 'Exportar para' panel controls, parameters, and export buttons (Step 54)."""
+    """Test 'Export to' panel controls, parameters, and export buttons (Step 54)."""
     from qgis.core import QgsProject
 
     layer = create_sample_polygon_layer()
@@ -282,10 +282,10 @@ def test_dock_export_to_group_and_buttons(qgis_app, tmp_path):
     assert dock.spn_speed.value() == 5.0
     assert dock.spn_gimbal_pitch.value() == -90.0
     assert dock.spn_waypoint_wait.value() == 0.0
-    assert dock.btn_export_litchi.text() == "Exportar Litchi (.csv)…"
-    assert dock.btn_export_kml.text() == "Exportar Litchi Hub clássico (.kml)…"
+    assert dock.btn_export_litchi.text() == "Export Litchi (.csv)…"
+    assert dock.btn_export_kml.text() == "Export classic Litchi Hub (.kml)…"
     assert "flylitchi.com/hub" in dock.btn_export_kml.toolTip()
-    assert dock.btn_export_dji.text() == "Exportar DJI Fly / Litchi Hub 2 (.kmz)…"
+    assert dock.btn_export_dji.text() == "Export DJI Fly / Litchi Hub 2 (.kmz)…"
     assert "hub.flylitchi.com" in dock.btn_export_dji.toolTip()
     assert "flylitchi.com/hub" in dock.btn_export_dji.toolTip()
 
@@ -339,7 +339,7 @@ def test_dock_export_kml_button_and_without_layer(qgis_app, tmp_path, monkeypatc
 
     assert hasattr(dock, "btn_export_kml")
     assert isinstance(dock.btn_export_kml, QPushButton)
-    assert dock.btn_export_kml.text() == "Exportar Litchi Hub clássico (.kml)…"
+    assert dock.btn_export_kml.text() == "Export classic Litchi Hub (.kml)…"
     assert "flylitchi.com/hub" in dock.btn_export_kml.toolTip()
 
     monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: None)
@@ -372,7 +372,7 @@ def test_dock_download_dem_button_and_without_layer(qgis_app, monkeypatch):
 
     assert hasattr(dock, "btn_download_dem")
     assert isinstance(dock.btn_download_dem, QPushButton)
-    assert dock.btn_download_dem.text() == "Baixar DEM da área…"
+    assert dock.btn_download_dem.text() == "Download area DEM…"
 
     scroll_main = dock.scroll_area.widget()
     parent = dock.btn_download_dem.parent()

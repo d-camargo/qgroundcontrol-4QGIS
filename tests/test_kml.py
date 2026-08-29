@@ -77,9 +77,9 @@ def test_zero_altitude_warning():
     route = Route(waypoints=[wp])
 
     warnings = validate_litchi_kml_route(route)
-    assert any("substitui altura zero por 30 m" in w for w in warnings)
+    assert any("replaces zero height with 30 m" in w for w in warnings)
     assert (
-        "Altura do waypoint 1 é zero no KML: o Mission Hub substitui altura zero por 30 m sem avisar."
+        "Height of waypoint 1 is zero in the KML: Mission Hub replaces zero height with 30 m without warning."
         in warnings
     )
 
@@ -90,9 +90,9 @@ def test_altitude_out_of_range_warning():
     route = Route(waypoints=[wp])
 
     warnings = validate_litchi_kml_route(route)
-    assert any("fora da faixa" in w for w in warnings)
+    assert any("outside the range" in w for w in warnings)
     assert (
-        f"Altura de 600.00 m no waypoint 1 fora da faixa [{MIN_KML_ALTITUDE}, 500.0]: o Mission Hub trunca para o limite."
+        f"Height of 600.00 m at waypoint 1 outside the range [{MIN_KML_ALTITUDE}, 500.0]: Mission Hub truncates it to the limit."
         in warnings
     )
 
@@ -100,7 +100,7 @@ def test_altitude_out_of_range_warning():
 def test_empty_route_raises_value_error():
     """Test that exporting a route with no waypoints raises ValueError."""
     route = Route(waypoints=[])
-    with pytest.raises(ValueError, match=r"Rota sem waypoints: nada a exportar para KML\."):
+    with pytest.raises(ValueError, match=r"Route has no waypoints: nothing to export to KML\."):
         route_to_litchi_kml(route)
 
 
@@ -111,8 +111,8 @@ def test_untransported_fields_warning_always_present():
 
     warnings = validate_litchi_kml_route(route)
     expected = (
-        "O KML não transporta proa, gimbal, velocidade, curva nem POI: "
-        "o Litchi aplica os padrões dele. Ajuste no Mission Hub após importar, ou use o .csv, que leva tudo."
+        "KML does not carry heading, gimbal, speed, curve, or POI: "
+        "Litchi applies its own defaults. Adjust in Mission Hub after importing, or use the .csv, which carries everything."
     )
     assert expected in warnings
 

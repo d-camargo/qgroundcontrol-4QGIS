@@ -59,11 +59,11 @@ def test_algorithm_metadata():
     """Verify SurveyGridAlgorithm metadata."""
     alg = SurveyGridAlgorithm()
     assert alg.name() == "gerar_grade_voo"
-    assert alg.displayName() == "Gerar grade de voo"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Generate flight grid"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
-    assert "Gera linhas de grade" in alg.shortHelpString()
+    assert "Generates photogrammetric flight grid" in alg.shortHelpString()
 
 
 def test_algorithm_execution():
@@ -147,11 +147,11 @@ def test_export_plan_metadata():
     """Verify ExportPlanAlgorithm metadata."""
     alg = ExportPlanAlgorithm()
     assert alg.name() == "exportar_plano_qgc"
-    assert alg.displayName() == "Exportar plano do QGC (.plan)"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Export QGC plan (.plan)"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
-    assert "Exporta um plano" in alg.shortHelpString()
+    assert "Exports a mission plan" in alg.shortHelpString()
 
 
 def test_export_plan_execution(tmp_path):
@@ -223,11 +223,11 @@ def test_photo_centers_metadata():
     """Verify PhotoCentersAlgorithm metadata."""
     alg = PhotoCentersAlgorithm()
     assert alg.name() == "gerar_centros_foto"
-    assert alg.displayName() == "Gerar centros de foto e pegadas"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Generate photo centers and footprints"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
-    assert "Gera camadas de pontos" in alg.shortHelpString()
+    assert "Generates point layers" in alg.shortHelpString()
 
 
 def test_photo_centers_execution():
@@ -303,11 +303,11 @@ def test_export_litchi_metadata():
     """Verify ExportLitchiAlgorithm metadata."""
     alg = ExportLitchiAlgorithm()
     assert alg.name() == "exportar_litchi_csv"
-    assert alg.displayName() == "Exportar missão Litchi (.csv)"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Export Litchi mission (.csv)"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
-    assert "Exporta uma missão" in alg.shortHelpString()
+    assert "Exports a flight mission" in alg.shortHelpString()
 
 
 def test_export_litchi_execution(tmp_path):
@@ -344,7 +344,7 @@ def test_export_litchi_execution(tmp_path):
         alg.TURNAROUND: 5.0,
         alg.ENTRY_LOCATION: 0,
         alg.REFLY: False,
-        alg.TRIGGER_MODE: 0,  # Por distância
+        alg.TRIGGER_MODE: 0,  # By distance
         alg.SPEED: 5.0,
         alg.GIMBAL_PITCH: -90.0,
         alg.WAYPOINT_WAIT: 2.0,  # 2s wait -> 2000ms
@@ -376,11 +376,11 @@ def test_export_dji_metadata():
     """Verify ExportDjiAlgorithm metadata."""
     alg = ExportDjiAlgorithm()
     assert alg.name() == "exportar_dji_kmz"
-    assert alg.displayName() == "Exportar missão DJI Fly (.kmz)"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Export DJI Fly mission (.kmz)"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
-    assert "Exporta uma missão" in alg.shortHelpString()
+    assert "Exports a flight mission" in alg.shortHelpString()
 
 
 def test_export_dji_execution(tmp_path):
@@ -417,7 +417,7 @@ def test_export_dji_execution(tmp_path):
         alg.TURNAROUND: 5.0,
         alg.ENTRY_LOCATION: 0,
         alg.REFLY: False,
-        alg.TRIGGER_MODE: 0,  # Por distância
+        alg.TRIGGER_MODE: 0,  # By distance
         alg.SPEED: 5.0,
         alg.GIMBAL_PITCH: -90.0,
         alg.WAYPOINT_WAIT: 1.0,
@@ -454,8 +454,8 @@ def test_export_litchi_kml_metadata():
     alg.initAlgorithm()
 
     assert alg.name() == "exportar_litchi_kml"
-    assert alg.displayName() == "Exportar missão Litchi Mission Hub (.kml)"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Export Litchi Mission Hub mission (.kml)"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
     assert "flylitchi.com/hub" in alg.shortHelpString()
@@ -479,11 +479,11 @@ def test_download_dem_metadata():
     alg.initAlgorithm()
 
     assert alg.name() == "baixar_dem_copernicus"
-    assert alg.displayName() == "Baixar DEM Copernicus da área"
-    assert alg.group() == "Planejamento de Voo"
+    assert alg.displayName() == "Download Copernicus DEM for area"
+    assert alg.group() == "Flight Planning"
     assert alg.groupId() == "planejamento_voo"
     assert alg.createInstance().name() == alg.name()
-    assert "Copernicus DEM (GLO-30)" in alg.shortHelpString()
+    assert "Copernicus (GLO-30)" in alg.shortHelpString()
 
     assert alg.parameterDefinition("INPUT") is not None
     assert alg.parameterDefinition("MARGEM") is not None

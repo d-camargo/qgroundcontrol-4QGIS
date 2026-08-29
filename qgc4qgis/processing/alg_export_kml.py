@@ -15,6 +15,7 @@ from qgis.core import (
     QgsProcessingParameterPoint,
     QgsProcessingParameterRasterLayer,
 )
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
@@ -29,6 +30,10 @@ from qgc4qgis.processing.alg_survey_grid import extract_polygons
 
 class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
     """QGIS Processing Algorithm to export Litchi Mission Hub KML (.kml) files."""
+
+    def tr(self, string: str) -> str:
+        """Return the translated string using the class context."""
+        return QCoreApplication.translate("ExportLitchiKmlAlgorithm", string)
 
     INPUT = "INPUT"
     CAMERA = "CAMERA"
@@ -58,11 +63,11 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
 
     def displayName(self) -> str:
         """Return localized human-readable algorithm name."""
-        return "Exportar missão Litchi Mission Hub (.kml)"
+        return self.tr("Export Litchi Mission Hub mission (.kml)")
 
     def group(self) -> str:
         """Return localized group name."""
-        return "Planejamento de Voo"
+        return self.tr("Flight Planning")
 
     def groupId(self) -> str:
         """Return unique group identifier."""
@@ -74,11 +79,11 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:
         """Return short help text for algorithm GUI."""
-        return (
-            "Exporta uma missão de voo no formato Litchi Mission Hub (.kml) "
-            "a partir de polígonos de cobertura ou linhas de grade de voo.\n\n"
-            "O arquivo KML gerado é destinado à importação no Litchi Mission Hub (flylitchi.com/hub -> Import).\n"
-            "Na janela de importação do Mission Hub, certifique-se de manter 'Add take photo action' MARCADO e 'Placemarks as POI' DESMARCADO."
+        return self.tr(
+            "Exports a flight mission in Litchi Mission Hub format (.kml) "
+            "from coverage polygons or flight grid lines.\n\n"
+            "The generated KML file is meant for import into Litchi Mission Hub (flylitchi.com/hub -> Import).\n"
+            "In the Mission Hub import window, make sure to keep 'Add take photo action' CHECKED and 'Placemarks as POI' UNCHECKED."
         )
 
     def initAlgorithm(self, config=None) -> None:
@@ -89,7 +94,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                "Camada de entrada (Polígonos ou Linhas)",
+                self.tr("Input layer (Polygons or Lines)"),
                 [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
             )
         )
@@ -97,7 +102,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.CAMERA,
-                "Câmera",
+                self.tr("Camera"),
                 options=camera_names,
                 defaultValue=0,
             )
@@ -106,7 +111,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
-                "Altura de voo (m)",
+                self.tr("Flight altitude (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=100.0,
                 minValue=0.0,
@@ -116,7 +121,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.GSD,
-                "GSD (cm/px) - se > 0 sobrescreve/calcula altura",
+                self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -126,7 +131,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
-                "Sobreposição lateral (%)",
+                self.tr("Side overlap (%)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=70.0,
                 minValue=0.0,
@@ -137,7 +142,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
-                "Sobreposição frontal (%)",
+                self.tr("Frontal overlap (%)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=70.0,
                 minValue=0.0,
@@ -148,7 +153,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ANGLE,
-                "Ângulo da grade (graus)",
+                self.tr("Grid angle (degrees)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
@@ -159,7 +164,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
-                "Distância de turnaround (m)",
+                self.tr("Turnaround distance (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=0.0,
                 minValue=0.0,
@@ -169,7 +174,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.ENTRY_LOCATION,
-                "Ponto de entrada",
+                self.tr("Entry point"),
                 options=["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"],
                 defaultValue=0,
             )
@@ -178,7 +183,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.REFLY,
-                "Grade cruzada (Refly 90°)",
+                self.tr("Cross grid (Refly 90°)"),
                 defaultValue=False,
             )
         )
@@ -186,7 +191,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
-                "Câmera manual: Largura do sensor (mm)",
+                self.tr("Manual camera: Sensor width (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=35.9,
                 minValue=0.0,
@@ -197,7 +202,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
-                "Câmera manual: Altura do sensor (mm)",
+                self.tr("Manual camera: Sensor height (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=24.0,
                 minValue=0.0,
@@ -208,7 +213,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
-                "Câmera manual: Largura da imagem (px)",
+                self.tr("Manual camera: Image width (px)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=7952,
                 minValue=0,
@@ -219,7 +224,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
-                "Câmera manual: Altura da imagem (px)",
+                self.tr("Manual camera: Image height (px)"),
                 QgsProcessingParameterNumber.Integer,
                 defaultValue=5304,
                 minValue=0,
@@ -230,7 +235,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
-                "Câmera manual: Distância focal (mm)",
+                self.tr("Manual camera: Focal length (mm)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=35.0,
                 minValue=0.0,
@@ -241,8 +246,8 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.TRIGGER_MODE,
-                "Modo de disparo",
-                options=["Por distância", "Por tempo", "Por foto"],
+                self.tr("Trigger mode"),
+                options=[self.tr("By distance"), self.tr("By time"), self.tr("By photo")],
                 defaultValue=2,
             )
         )
@@ -250,7 +255,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SPEED,
-                "Velocidade (m/s)",
+                self.tr("Speed (m/s)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=5.0,
                 minValue=0.1,
@@ -260,7 +265,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.ELEVATION_LAYER,
-                "Camada de elevação (DEM) — se definida, exporta em modo acima do terreno",
+                self.tr("Elevation layer (DEM) — if set, exports in above-terrain mode"),
                 optional=True,
                 defaultValue=None,
             )
@@ -269,7 +274,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
-                "Tolerância do terreno (m)",
+                self.tr("Terrain tolerance (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=10.0,
                 minValue=0.1,
@@ -279,7 +284,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterPoint(
                 self.TAKEOFF_POINT,
-                "Ponto de decolagem (opcional — padrão: primeiro waypoint)",
+                self.tr("Takeoff point (optional — default: first waypoint)"),
                 optional=True,
                 defaultValue=None,
             )
@@ -288,7 +293,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT,
-                "Arquivo de destino (.kml)",
+                self.tr("Output file (.kml)"),
                 fileFilter="Litchi Mission Hub KML (*.kml)",
             )
         )
@@ -301,7 +306,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
 
         output_file = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
         if not output_file:
-            raise QgsProcessingException("Caminho do arquivo de saída não especificado.")
+            raise QgsProcessingException(self.tr("Output file path not specified."))
 
         camera_idx = self.parameterAsEnum(parameters, self.CAMERA, context)
         cameras = load_cameras()
@@ -356,7 +361,7 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
         )
 
         if not calc.recalculate():
-            raise QgsProcessingException("Falha ao calcular os parâmetros da câmera/voo.")
+            raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         crs_wgs84 = QgsCoordinateReferenceSystem("EPSG:4326")
         source_crs = source.sourceCrs()
@@ -476,14 +481,21 @@ class ExportLitchiKmlAlgorithm(QgsProcessingAlgorithm):
             )
             if elev is None:
                 raise QgsProcessingException(
-                    "Não foi possível amostrar a elevação no ponto de decolagem (fora do DEM ou NoData). Escolha outro ponto ou amplie o raster de elevação."
+                    self.tr(
+                        "Could not sample elevation at the takeoff point (outside the DEM "
+                        "or NoData). Choose another point or expand the elevation raster."
+                    )
                 )
 
             route = rebase_route_to_takeoff(route, elev)
 
         if trigger_mode_str != "POR_FOTO":
             feedback.pushWarning(
-                'Modo de disparo diferente de "Por foto": o KML terá vértices só nas pontas dos transectos, e o "Add take photo action" do Mission Hub vai disparar apenas neles.'
+                self.tr(
+                    'Trigger mode other than "By photo": the KML will only have vertices at '
+                    'the transect ends, and the Mission Hub "Add take photo action" will '
+                    "only trigger there."
+                )
             )
 
         warnings = save_litchi_kml(output_file, route)

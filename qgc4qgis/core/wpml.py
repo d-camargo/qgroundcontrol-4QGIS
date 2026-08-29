@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from qgc4qgis.core.i18n import tr
 from qgc4qgis.core.missionitems import DistanceMode
 
 KML_NS = "http://www.opengis.net/kml/2.2"
@@ -1015,8 +1016,8 @@ def validate_wpml_route(
     relative_modes = (DistanceMode.RELATIVE, 0, "RELATIVE", "relative")
     if terrain_like_height_mode or (alt_mode is not None and alt_mode not in relative_modes):
         raise ValueError(
-            "Exportação WPML aceita apenas altura relativa ao ponto de decolagem; "
-            "converta a rota com rebase_route_to_takeoff() antes de exportar (D10)."
+            tr("WPML export only accepts height relative to the takeoff point; ")
+            + tr("convert the route with rebase_route_to_takeoff() before exporting (D10).")
         )
 
     warnings: list[str] = []
@@ -1035,12 +1036,16 @@ def validate_wpml_route(
     le_zero_count = sum(1 for wp in wp_list if _parse_waypoint(wp)[2] <= 0)
     if le_zero_count > 0:
         warnings.append(
-            f"Altura relativa ≤ 0 em {le_zero_count} waypoint(s): a rota passa abaixo do ponto de decolagem."
+            tr(
+                "Relative height ≤ 0 in {le_zero_count} waypoint(s): the route goes below the takeoff point."
+            ).format(le_zero_count=le_zero_count)
         )
 
     if max_waypoints > 0 and len(wp_list) > max_waypoints:
         warnings.append(
-            f"Número de waypoints ({len(wp_list)}) excede o limite do DJI WPML ({max_waypoints})."
+            tr(
+                "Number of waypoints ({n_waypoints}) exceeds the DJI WPML limit ({max_waypoints})."
+            ).format(n_waypoints=len(wp_list), max_waypoints=max_waypoints)
         )
 
     return warnings

@@ -422,7 +422,7 @@ def test_save_kmz_terrain_mode_refusal():
         waypoints=[RouteWaypoint(lat=-23.55, lon=-46.63, altura=50.0)],
         modo_altitude=DistanceMode.TERRAIN,
     )
-    msg_regex = r"rebase_route_to_takeoff\(\) antes de exportar \(D10\)"
+    msg_regex = r"rebase_route_to_takeoff\(\) before exporting \(D10\)"
     with tempfile.TemporaryDirectory() as tmpdir:
         kmz_path = Path(tmpdir) / "terrain.kmz"
         with pytest.raises(ValueError, match=msg_regex):
@@ -447,7 +447,7 @@ def test_validate_wpml_route_le_zero_height_warning():
     warnings = validate_wpml_route(route=route_le_zero)
     assert len(warnings) == 1
     assert warnings[0] == (
-        "Altura relativa ≤ 0 em 2 waypoint(s): a rota passa abaixo do ponto de decolagem."
+        "Relative height ≤ 0 in 2 waypoint(s): the route goes below the takeoff point."
     )
 
 
@@ -457,7 +457,7 @@ def test_save_kmz_waypoint_limit_warning():
         kmz_path = Path(tmpdir) / "limit.kmz"
         warnings = save_kmz(kmz_path, waypoints=waypoints, max_waypoints=5)
         assert len(warnings) == 1
-        assert "excede o limite" in warnings[0]
+        assert "exceeds the" in warnings[0]
 
 
 def test_wpml_kmz_xml_validation():

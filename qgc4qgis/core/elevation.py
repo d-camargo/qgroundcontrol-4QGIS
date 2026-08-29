@@ -3,10 +3,10 @@
 Data structures, URL formatting, tile grid partitioning, and response parsing
 for the Copernicus DEM elevation service hosted at terrain-ce.suite.auterion.com.
 
-GDAL e OSR (osgeo) são importados tardiamente, dentro das funções de escrita,
-para o carregamento do plugin não depender dos bindings GDAL (frágeis em ambientes
-com NumPy 2.x sombreado). As exceções GDAL/OSR são habilitadas por módulo via
-_enable_gdal_exceptions() para evitar a importação de osgeo.gdal_array.
+GDAL and OSR (osgeo) are imported lazily, inside the writer functions, so
+plugin loading does not depend on the GDAL bindings (fragile in environments
+with NumPy 2.x shadowed). GDAL/OSR exceptions are enabled per module via
+_enable_gdal_exceptions() to avoid importing osgeo.gdal_array.
 """
 
 import json

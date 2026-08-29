@@ -1,19 +1,21 @@
-# QGC4QGIS — Complemento de Planejamento de Voo do QGroundControl para QGIS
+# QGC4QGIS — QGroundControl Flight Planning Plugin for QGIS
 
-O **QGC4QGIS** é um complemento (*plugin*) para o QGIS que integra as funcionalidades de planejamento de voo fotogramétrico do **QGroundControl (QGC)** diretamente no ambiente GIS. Ele permite gerar grades de voo (*Survey Grids*), simular centros de tomada de foto e pegadas (*footprints*), calcular estatísticas da missão e exportar arquivos de plano de voo no formato nativo `.plan` do QGroundControl.
+> Portuguese version: [README.pt-BR.md](README.pt-BR.md)
+
+**QGC4QGIS** is a QGIS *plugin* that integrates **QGroundControl (QGC)** photogrammetric flight planning features directly into the GIS environment. It lets you generate flight grids (*Survey Grids*), simulate photo centers and footprints, calculate mission statistics, and export flight plan files in QGroundControl's native `.plan` format.
 
 ---
 
-## 1. Instalação
+## 1. Installation
 
-### Requisitos
-- **QGIS**: versão 3.34 a 4.x.
-- **Python**: 3.9 ou superior (incluído nas distribuições standard do QGIS).
+### Requirements
+- **QGIS**: version 3.34 to 4.x.
+- **Python**: 3.9 or higher (included in QGIS standard distributions).
 
-### Métodos de Instalação
+### Installation Methods
 
-#### Método A: Cópia Direta (Recomendado para Desenvolvimento)
-Copie ou crie um link simbólico da pasta `qgc4qgis` no diretório de plugins do seu perfil do QGIS:
+#### Method A: Direct Copy (Recommended for Development)
+Copy or create a symbolic link of the `qgc4qgis` folder into your QGIS profile's plugins directory:
 
 - **Linux**:
   ```bash
@@ -29,232 +31,232 @@ Copie ou crie um link simbólico da pasta `qgc4qgis` no diretório de plugins do
   ~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/qgc4qgis
   ```
 
-#### Método B: Instalação via Arquivo ZIP
-1. Compacte a pasta `qgc4qgis` em um arquivo `.zip`.
-2. No QGIS, acesse o menu **Complementos** > **Gerenciar e Instalar Complementos...**
-3. Selecione a aba **Instalar a partir do ZIP**.
-4. Selecione o arquivo `.zip` criado e clique em **Instalar complemento**.
+#### Method B: Installation via ZIP File
+1. Compress the `qgc4qgis` folder into a `.zip` file.
+2. In QGIS, go to the **Plugins** menu > **Manage and Install Plugins...**
+3. Select the **Install from ZIP** tab.
+4. Select the `.zip` file you created and click **Install Plugin**.
 
-### Ativação
-Após copiar ou instalar o arquivo, abra o QGIS, acesse o menu **Complementos** > **Gerenciar e Instalar Complementos...**, localize **QGC4QGIS** na lista e marque a caixa de seleção para ativá-lo.
+### Activation
+After copying or installing the file, open QGIS, go to the **Plugins** menu > **Manage and Install Plugins...**, find **QGC4QGIS** in the list, and check the box to enable it.
 
 ---
 
-## 2. Fluxo de Trabalho em Cinco Passos
+## 2. Five-Step Workflow
 
-O planejamento de missão de voo fotogramétrico pelo painel acoplável (*Dock Widget*) do QGC4QGIS segue um fluxo estruturado em **cinco passos**:
+Photogrammetric flight mission planning through the QGC4QGIS dock widget (*Dock Widget*) follows a structured **five-step** workflow:
 
 ```text
-[Passo 1: Polígono] ➔ [Passo 2: Câmera] ➔ [Passo 3: Altura/GSD] ➔ [Passo 4: Grade] ➔ [Passo 5: Exportação]
+[Step 1: Polygon] ➔ [Step 2: Camera] ➔ [Step 3: Altitude/GSD] ➔ [Step 4: Grid] ➔ [Step 5: Export]
 ```
 
-1. **Seleção do Polígono de Cobertura**:
-   - Selecione a camada vetorial de polígonos que define a área de interesse (AOI).
-   - Escolha a feição específica na camada ou utilize todas as feições para delimitar o perímetro do levantamento.
+1. **Coverage Polygon Selection**:
+   - Select the polygon vector layer that defines the area of interest (AOI).
+   - Choose the specific feature in the layer or use all features to delimit the survey perimeter.
 
-2. **Configuração da Câmera**:
-   - Escolha um modelo de câmera pré-configurado da biblioteca de câmeras integradas (ex.: Sony ILCE-7R, câmeras DJI, etc.).
-   - Alternativamente, selecione *Custom Camera* (Câmera Manual) para especificar as propriedades físicas do sensor: largura do sensor ($mm$), altura do sensor ($mm$), largura da imagem ($px$), altura da imagem ($px$) e distância focal ($mm$).
+2. **Camera Configuration**:
+   - Choose a preconfigured camera model from the integrated camera library (e.g., Sony ILCE-7R, DJI cameras, etc.).
+   - Alternatively, select *Custom Camera* (Manual Camera) to specify the sensor's physical properties: sensor width ($mm$), sensor height ($mm$), image width ($px$), image height ($px$), and focal length ($mm$).
 
-3. **Definição da Altura de Voo ou GSD**:
-   - Escolha o parâmetro principal de controle: **Altura de Voo (m)** ou **GSD (cm/px)**.
-   - Ao alterar um dos valores, o complemento calcula automaticamente o valor correspondente mantendo a relação óptica da câmera.
+3. **Flight Altitude or GSD Definition**:
+   - Choose the main control parameter: **Flight Altitude (m)** or **GSD (cm/px)**.
+   - When one of the values is changed, the plugin automatically calculates the corresponding value while keeping the camera's optical relationship.
 
-4. **Ajuste da Grade e Sobreposições**:
-   - Defina a **Sobreposição Lateral (%)** (*side overlap*) e a **Sobreposição Frontal (%)** (*front overlap*).
-   - Ajuste o **Ângulo da Grade (graus)** para orientar os transectos de voo no sentido desejado (ex.: alinhado ao vento ou à maior dimensão do terreno).
-   - Configure a **Distância de Turnaround (m)** para prolongar as faixas além do polígono, permitindo estabilizar o voo antes das fotos.
-   - Defina o **Ponto de Entrada** (*Top-Left*, *Top-Right*, *Bottom-Left*, *Bottom-Right*) e habilite a **Grade Cruzada (Refly 90°)** se desejar um voo ortogonal duplo.
+4. **Grid and Overlap Adjustment**:
+   - Set the **Side Overlap (%)** (*side overlap*) and the **Front Overlap (%)** (*front overlap*).
+   - Adjust the **Grid Angle (degrees)** to orient the flight transects in the desired direction (e.g., aligned with the wind or with the largest dimension of the terrain).
+   - Configure the **Turnaround Distance (m)** to extend the strips beyond the polygon, allowing the flight to stabilize before taking photos.
+   - Set the **Entry Point** (*Top-Left*, *Top-Right*, *Bottom-Left*, *Bottom-Right*) and enable **Cross Grid (Refly 90°)** if you want a double orthogonal flight.
 
-5. **Pré-visualização e Exportação (.plan)**:
-   - Visualize a grade de transectos, os centros das fotos e os polígonos de pegada (*footprints*) diretamente no mapa do QGIS em tempo real.
-   - Verifique as estatísticas calculadas: área total ($ha$), extensão de voo ($km$), número estimado de fotos e tempo de voo.
-   - Clique em **Exportar Plano QGC (.plan)** para salvar o arquivo pronto para ser importado no QGroundControl ou carregado no drone.
+5. **Preview and Export (.plan)**:
+   - Preview the transect grid, photo centers, and footprint polygons directly on the QGIS map in real time.
+   - Check the calculated statistics: total area ($ha$), flight length ($km$), estimated number of photos, and flight time.
+   - Click **Export QGC Plan (.plan)** to save the file ready to be imported into QGroundControl or loaded onto the drone.
 
 ---
 
-## 3. Tabela de Parâmetros
+## 3. Parameter Table
 
-A tabela a seguir descreve todos os parâmetros disponíveis nas ferramentas de processamento do complemento (`gerar_grade_voo`, `gerar_centros_foto` e `exportar_plano_qgc`):
+The table below describes all the parameters available in the plugin's processing tools (`gerar_grade_voo`, `gerar_centros_foto`, and `exportar_plano_qgc`):
 
-| Parâmetro | Identificador | Tipo / Unidade | Valor Padrão | Descrição |
+| Parameter | Identifier | Type / Unit | Default Value | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Camada de Entrada** | `INPUT` | Vetorial (Polígono / Linha) | *Obrigatório* | Camada vetorial contendo a geometria da área de cobertura ou linhas de transectos. |
-| **Câmera** | `CAMERA` | Enum / Texto | `0` (Primeira da lista) | Câmera selecionada da biblioteca predefinida ou modelo manual (*Custom Camera*). |
-| **Altura de Voo** | `ALTITUDE` | Numérico (`Double`) / metros ($m$) | `100.0` | Altura relativa de voo em relação ao ponto de decolagem. |
-| **GSD** | `GSD` | Numérico (`Double`) / $cm/px$ | `0.0` | Resolução no solo. Se $> 0$, calcula e substitui a altura de voo. |
-| **Sobreposição Lateral** | `OVERLAP_SIDE` | Numérico (`Double`) / porcentagem ($\%$) | `70.0` | Porcentagem de sobreposição entre faixas de voo adjacentes. |
-| **Sobreposição Frontal** | `OVERLAP_FRONTAL` | Numérico (`Double`) / porcentagem ($\%$) | `70.0` | Porcentagem de sobreposição entre imagens consecutivas na mesma faixa. |
-| **Ângulo da Grade** | `ANGLE` | Numérico (`Double`) / graus ($^\circ$) | `0.0` | Orientação dos transectos de voo em relação ao Norte ($-180^\circ$ a $180^\circ$). |
-| **Turnaround** | `TURNAROUND` | Numérico (`Double`) / metros ($m$) | `0.0` | Extensão das linhas fora do polígono para manobra de curva e aceleração da aeronave. |
-| **Ponto de Entrada** | `ENTRY_LOCATION` | Enum (`0`: Top-Left, `1`: Top-Right, `2`: Bottom-Left, `3`: Bottom-Right) | `0` | Canto de início da execução da grade de voo. |
-| **Grade Cruzada** | `REFLY` | Booleano (`True`/`False`) | `False` | Se ativo, gera uma segunda grade de transectos perpendicular ($90^\circ$) à primeira. |
-| **Largura do Sensor** | `SENSOR_WIDTH` | Numérico (`Double`) / $mm$ | `35.9` | Largura física do sensor fotográfico (usado em Câmera Manual). |
-| **Altura do Sensor** | `SENSOR_HEIGHT` | Numérico (`Double`) / $mm$ | `24.0` | Altura física do sensor fotográfico (usado em Câmera Manual). |
-| **Largura da Imagem** | `IMAGE_WIDTH` | Numérico (`Integer`) / $pixels$ | `7952` | Resolução horizontal da imagem capturada (usado em Câmera Manual). |
-| **Altura da Imagem** | `IMAGE_HEIGHT` | Numérico (`Integer`) / $pixels$ | `5304` | Resolução vertical da imagem capturada (usado em Câmera Manual). |
-| **Distância Focal** | `FOCAL_LENGTH` | Numérico (`Double`) / $mm$ | `35.0` | Distância focal real da lente da câmera (usado em Câmera Manual). |
-| **Velocidade de Cruzeiro** | `CRUISE_SPEED` | Numérico (`Double`) / $m/s$ | `15.0` | Velocidade horizontal nominal da aeronave em voo (utilizada na exportação do `.plan`). |
-| **Velocidade Pairado** | `HOVER_SPEED` | Numérico (`Double`) / $m/s$ | `5.0` | Velocidade horizontal de desaceleração/pairado em multicópteros. |
-| **Firmware** | `FIRMWARE_TYPE` | Enum (`12`: PX4, `3`: ArduPilot) | `12` (PX4) | Protocolo e formato do piloto automático para exportação da missão. |
-| **Tipo de Veículo** | `VEHICLE_TYPE` | Enum (`2`: Multicóptero, `1`: Asa Fixa, `19`: VTOL) | `2` (Multicóptero) | Categoria do veículo aéreo não tripulado. |
+| **Input Layer** | `INPUT` | Vector (Polygon / Line) | *Required* | Vector layer containing the coverage area geometry or transect lines. |
+| **Camera** | `CAMERA` | Enum / Text | `0` (First in the list) | Camera selected from the predefined library or manual model (*Custom Camera*). |
+| **Flight Altitude** | `ALTITUDE` | Numeric (`Double`) / meters ($m$) | `100.0` | Relative flight altitude above the takeoff point. |
+| **GSD** | `GSD` | Numeric (`Double`) / $cm/px$ | `0.0` | Ground resolution. If $> 0$, it calculates and overrides the flight altitude. |
+| **Side Overlap** | `OVERLAP_SIDE` | Numeric (`Double`) / percentage ($\%$) | `70.0` | Overlap percentage between adjacent flight strips. |
+| **Front Overlap** | `OVERLAP_FRONTAL` | Numeric (`Double`) / percentage ($\%$) | `70.0` | Overlap percentage between consecutive images in the same strip. |
+| **Grid Angle** | `ANGLE` | Numeric (`Double`) / degrees ($^\circ$) | `0.0` | Orientation of the flight transects relative to North ($-180^\circ$ to $180^\circ$). |
+| **Turnaround** | `TURNAROUND` | Numeric (`Double`) / meters ($m$) | `0.0` | Extension of lines beyond the polygon for the aircraft's turn and acceleration maneuver. |
+| **Entry Point** | `ENTRY_LOCATION` | Enum (`0`: Top-Left, `1`: Top-Right, `2`: Bottom-Left, `3`: Bottom-Right) | `0` | Starting corner for the flight grid execution. |
+| **Cross Grid** | `REFLY` | Boolean (`True`/`False`) | `False` | If enabled, generates a second transect grid perpendicular ($90^\circ$) to the first. |
+| **Sensor Width** | `SENSOR_WIDTH` | Numeric (`Double`) / $mm$ | `35.9` | Physical width of the photographic sensor (used in Manual Camera). |
+| **Sensor Height** | `SENSOR_HEIGHT` | Numeric (`Double`) / $mm$ | `24.0` | Physical height of the photographic sensor (used in Manual Camera). |
+| **Image Width** | `IMAGE_WIDTH` | Numeric (`Integer`) / $pixels$ | `7952` | Horizontal resolution of the captured image (used in Manual Camera). |
+| **Image Height** | `IMAGE_HEIGHT` | Numeric (`Integer`) / $pixels$ | `5304` | Vertical resolution of the captured image (used in Manual Camera). |
+| **Focal Length** | `FOCAL_LENGTH` | Numeric (`Double`) / $mm$ | `35.0` | Actual focal length of the camera lens (used in Manual Camera). |
+| **Cruise Speed** | `CRUISE_SPEED` | Numeric (`Double`) / $m/s$ | `15.0` | Nominal horizontal speed of the aircraft in flight (used when exporting the `.plan`). |
+| **Hover Speed** | `HOVER_SPEED` | Numeric (`Double`) / $m/s$ | `5.0` | Horizontal deceleration/hover speed for multicopters. |
+| **Firmware** | `FIRMWARE_TYPE` | Enum (`12`: PX4, `3`: ArduPilot) | `12` (PX4) | Autopilot protocol and format for mission export. |
+| **Vehicle Type** | `VEHICLE_TYPE` | Enum (`2`: Multicopter, `1`: Fixed Wing, `19`: VTOL) | `2` (Multicopter) | Category of the unmanned aerial vehicle. |
 
 ---
 
-## 4. Limitações Herdadas do QGroundControl
+## 4. Limitations Inherited from QGroundControl
 
-Para manter total compatibilidade com o algoritmo original do QGroundControl, o QGC4QGIS herda **duas limitações arquiteturais** da biblioteca `SurveyComplexItem` do QGC:
+To maintain full compatibility with QGroundControl's original algorithm, QGC4QGIS inherits **two architectural limitations** from the QGC's `SurveyComplexItem` library.
 
-### 1. Polígono Côncavo sem Divisão (*Concave Polygon Decomposition*)
-- **Descrição**: O gerador de transectos de voo do QGC trata o polígono de cobertura como um único anel externo contínuo (*outer ring*). Ao processar áreas com geometrias côncavas (como formatos em "L", "C" ou "U") ou polígonos contendo furos (*donuts*), a grade é gerada varrendo a extensão total do envelope (*bounding envelope*).
-- **Consequência**: O algoritmo não realiza a decomposição automática da geometria em subpolígonos convexos isolados. Como resultado, alguns transectos podem cruzar regiões fora do polígono entre duas reentrâncias côncavas.
+### 1. Concave Polygon Without Decomposition (*Concave Polygon Decomposition*)
+- **Description**: QGC's flight transect generator treats the coverage polygon as a single continuous outer ring (*outer ring*). When processing areas with concave geometries (such as "L", "C", or "U" shapes) or polygons containing holes (*donuts*), the grid is generated by sweeping the full extent of the bounding envelope (*bounding envelope*).
+- **Consequence**: The algorithm does not perform automatic decomposition of the geometry into isolated convex subpolygons. As a result, some transects may cross regions outside the polygon between two concave indentations.
 
-### 2. GSD Calculado Apenas pela Largura do Sensor (*Width-Only GSD Calculation*)
-- **Descrição**: A equação de conversão entre Altura de Voo ($m$) e GSD ($cm/px$) no QGroundControl calcula a resolução no solo exclusivamente com base na dimensão horizontal do sensor (`sensorWidth`) e na largura da imagem em pixels (`imageWidth`):
+### 2. GSD Calculated Using Sensor Width Only (*Width-Only GSD Calculation*)
+- **Description**: The conversion equation between Flight Altitude ($m$) and GSD ($cm/px$) in QGroundControl calculates ground resolution exclusively based on the sensor's horizontal dimension (`sensorWidth`) and the image width in pixels (`imageWidth`):
 
-$$\text{GSD} = \frac{\text{Altura de Voo (m)} \times \text{Largura do Sensor (mm)}}{\text{Distância Focal (mm)} \times \text{Largura da Imagem (px)}} \times 100$$
+$$\text{GSD} = \frac{\text{Flight Altitude (m)} \times \text{Sensor Width (mm)}}{\text{Focal Length (mm)} \times \text{Image Width (px)}} \times 100$$
 
-$$\text{Altura de Voo (m)} = \frac{\text{GSD (cm/px)} \times \text{Distância Focal (mm)} \times \text{Largura da Imagem (px)}}{\text{Largura do Sensor (mm)} \times 100}$$
+$$\text{Flight Altitude (m)} = \frac{\text{GSD (cm/px)} \times \text{Focal Length (mm)} \times \text{Image Width (px)}}{\text{Sensor Width (mm)} \times 100}$$
 
-- **Consequência**: A dimensão vertical do sensor (`sensorHeight`) e a altura da imagem em pixels (`imageHeight`) não afetam o cálculo escalar do GSD nem a altura de voo gerada, sendo utilizadas apenas para determinar a extensão das pegadas (*footprints*) e a distância de disparo frontal de fotos.
+- **Consequence**: The sensor's vertical dimension (`sensorHeight`) and the image height in pixels (`imageHeight`) do not affect the scalar GSD calculation or the resulting flight altitude; they are used only to determine the extent of the footprints and the front photo trigger distance.
 
 ---
 
-## 5. Exportar para Litchi e DJI Fly
+## 5. Export to Litchi and DJI Fly
 
-Além do formato nativo `.plan` do QGroundControl, o QGC4QGIS permite exportar missões para os aplicativos **Litchi** (formato `.csv`) e **DJI Fly** (formato WPML `.kmz`).
+In addition to QGroundControl's native `.plan` format, QGC4QGIS lets you export missions to the **Litchi** (`.csv` format) and **DJI Fly** (WPML `.kmz` format) applications.
 
-### 1. Exportação e Carga no Litchi
+### 1. Export and Loading in Litchi
 
-Ao carregar missões no Litchi, é importante diferenciar as duas interfaces do Mission Hub:
+When loading missions into Litchi, it is important to distinguish between the two Mission Hub interfaces:
 
-| Interface | URL | Formatos de Missão Suportados |
+| Interface | URL | Supported Mission Formats |
 | :--- | :--- | :--- |
-| **Hub Clássico** | `flylitchi.com/hub` | `.csv`, `.kml`, `.wpml` |
+| **Classic Hub** | `flylitchi.com/hub` | `.csv`, `.kml`, `.wpml` |
 | **Hub 2** | `hub.flylitchi.com` | `.csv`, `.kmz` (WPML) |
 
 > [!WARNING]
-> **Atenção ao importar no Hub 2 (`hub.flylitchi.com`):**  
-> O Hub 2 possui **dois** diálogos de importação distintos. O diálogo de área/overlay (`.kml`, `.kmz`, `.geojson`, `.json`) serve apenas para desenhar camadas de mapa e **nunca cria waypoints** de voo. Para carregar a rota de voo, utilize sempre o diálogo de importação de missão.
+> **Caution when importing into Hub 2 (`hub.flylitchi.com`):**  
+> Hub 2 has **two** distinct import dialogs. The area/overlay dialog (`.kml`, `.kmz`, `.geojson`, `.json`) is only for drawing map layers and **never creates flight** waypoints. To load the flight route, always use the mission import dialog.
 
 > [!NOTE]
-> **Compatibilidade do arquivo `.kmz`:**  
-> O mesmo arquivo `.kmz` exportado para o **DJI Fly** é importado pelo **Hub 2** como missão, pois o Hub 2 detecta os arquivos `template.kml` + `waylines.wpml` dentro do arquivo comprimido. O **hub clássico não lê arquivos `.kmz`**.
+> **`.kmz` file compatibility:**  
+> The same `.kmz` file exported for **DJI Fly** is imported by **Hub 2** as a mission, because Hub 2 detects the `template.kml` + `waylines.wpml` files inside the compressed file. The **classic hub does not read `.kmz` files**.
 
-1. **Passos de Carga**:
-   - Acesse o **Litchi Mission Hub** (`flylitchi.com/hub` ou `hub.flylitchi.com`) ou abra o aplicativo móvel Litchi.
-   - Acesse a opção de importação de missão (**Mission → Import**) e selecione o arquivo `.csv` (ou `.kmz` no Hub 2) exportado pelo plugin.
-   - Clique em **Salvar** (*Save*) para sincronizar a missão importada com sua conta e dispositivos.
-2. **Três Ajustes Globais Manuais Exigidos (Formato D8)**:
-   Ao importar uma missão em CSV no Litchi Mission Hub, três parâmetros globais precisam ser definidos manualmente no painel antes de salvar:
-   - **Heading Mode** (Modo de Direção/Proa): escolher o comportamento da proa. Com **"Custom (WP)"** o aplicativo passa a usar o `heading(deg)` gravado no CSV (o azimute de cada transect).
-   - **Finish Action** (Ação ao Finalizar): definir a ação executada ao término da rota (ex.: *Return to Home (RTH)*, *None* ou *Land*).
-   - **Path Mode** (Modo de Trajetória): marcar **"Straight Lines"** (linhas retas) — o CSV é gerado com `curvesize=0` e não representa curvas.
+1. **Loading Steps**:
+   - Access the **Litchi Mission Hub** (`flylitchi.com/hub` or `hub.flylitchi.com`) or open the Litchi mobile app.
+   - Access the mission import option (**Mission → Import**) and select the `.csv` file (or `.kmz` on Hub 2) exported by the plugin.
+   - Click **Save** to sync the imported mission with your account and devices.
+2. **Three Manual Global Adjustments Required (D8 Format)**:
+   When importing a CSV mission in the Litchi Mission Hub, three global parameters need to be set manually in the panel before saving:
+   - **Heading Mode**: choose the heading behavior. With **"Custom (WP)"**, the application uses the `heading(deg)` recorded in the CSV (the azimuth of each transect).
+   - **Finish Action**: define the action executed at the end of the route (e.g., *Return to Home (RTH)*, *None*, or *Land*).
+   - **Path Mode**: check **"Straight Lines"** — the CSV is generated with `curvesize=0` and does not represent curves.
 
-### 1.b Carga por KML no hub clássico (com ação de foto por waypoint)
+### 1.b Loading via KML on the Classic Hub (with a per-waypoint photo action)
 
-1. **Passos de Carga**:
-   - Acesse o **Litchi Mission Hub clássico** (`flylitchi.com/hub`).
-   - Acesse a opção de importação (**Mission → Import**) e selecione o arquivo `.kml`.
-   - **Marque a opção "Add take photo action"** e **deixe "Placemarks as POI" desmarcado**.
-   - Essa configuração insere automaticamente uma ação *Take Photo* em **todos** os waypoints e força o modo de trajetória para linhas retas (*Straight Lines*).
+1. **Loading Steps**:
+   - Access the **Classic Litchi Mission Hub** (`flylitchi.com/hub`).
+   - Access the import option (**Mission → Import**) and select the `.kml` file.
+   - **Check the "Add take photo action" option** and **leave "Placemarks as POI" unchecked**.
+   - This setting automatically inserts a *Take Photo* action at **all** waypoints and forces the path mode to straight lines (*Straight Lines*).
 
-2. **Requisito do Modo de Disparo**:
-   - O uso do formato `.kml` só faz sentido quando a missão é gerada com o **Modo de disparo = "Por foto"**. Caso contrário, os vértices do KML serão apenas as pontas (início e fim) dos transectos.
-   - Essa mesma opção (**Modo de disparo = "Por foto"**) já resolve a amostragem de waypoints para o formato `.csv`, que é a opção recomendada por transportar também proa, gimbal, velocidade e curva.
+2. **Trigger Mode Requirement**:
+   - Using the `.kml` format only makes sense when the mission is generated with **Trigger Mode = "By photo"**. Otherwise, the KML vertices will only be the endpoints (start and end) of the transects.
+   - This same option (**Trigger Mode = "By photo"**) also resolves the waypoint sampling for the `.csv` format, which is the recommended option since it also carries heading, gimbal, speed, and curve.
 
-3. **Parâmetros Ausentes no KML e Ajustes no Mission Hub**:
-   Como o formato KML contém apenas coordenadas geográficas e altitudes, os demais parâmetros não são importados e devem ser ajustados manualmente no Mission Hub:
+3. **Parameters Missing from KML and Adjustments in the Mission Hub**:
+   Since the KML format contains only geographic coordinates and altitudes, the remaining parameters are not imported and must be adjusted manually in the Mission Hub:
 
-   | Parâmetro Ausente no KML | Comportamento Padrão no Hub Clássico | Onde Ajustar no Mission Hub |
+   | Parameter Missing from KML | Default Behavior in the Classic Hub | Where to Adjust in the Mission Hub |
    | :--- | :--- | :--- |
-   | **Proa (Heading)** | Direção para o próximo waypoint (ou Norte) | Painel de Configurações da Missão (`Heading Mode`) |
-   | **Gimbal Pitch** | $0^\circ$ (horizontal) | Propriedades do Waypoint ou Ações |
-   | **Velocidade (Speed)** | Velocidade padrão global da missão | Painel de Configurações da Missão (`Speed`) |
-   | **Curva (Cruising/Curved)** | *Straight Lines* (forçado por *Take Photo*) | Painel de Configurações da Missão (`Path Mode`) |
-   | **Pontos de Interesse (POI)** | Não importados (desmarcar "Placemarks as POI") | Adicionar manualmente no mapa |
-   | **Modo de Altitude Explícito** | Relativo ao solo no ponto de decolagem (*Relative*) | Ajuste individual do waypoint |
+   | **Heading** | Direction to the next waypoint (or North) | Mission Settings Panel (`Heading Mode`) |
+   | **Gimbal Pitch** | $0^\circ$ (horizontal) | Waypoint Properties or Actions |
+   | **Speed** | Global default mission speed | Mission Settings Panel (`Speed`) |
+   | **Curve (Cruising/Curved)** | *Straight Lines* (forced by *Take Photo*) | Mission Settings Panel (`Path Mode`) |
+   | **Points of Interest (POI)** | Not imported (uncheck "Placemarks as POI") | Add manually on the map |
+   | **Explicit Altitude Mode** | Relative to the ground at the takeoff point (*Relative*) | Individual waypoint adjustment |
 
-4. **Comportamentos Silenciosos e Limites do Importador KML**:
-   - **Avisos Silenciosos de Altitude**: O importador KML do hub clássico converte silenciosamente **altura 0 m para 30 m** e trunca qualquer altitude fora do intervalo `[-200, 500]` metros (o plugin avisa o usuário antes da exportação sobre esses cenários).
-   - **Teto de Waypoints**: O teto de waypoints medido no hub clássico para arquivos KML é de **10.000** (acima disso, os waypoints excedentes somem silenciosamente sem aviso), enquanto o exportador `.csv` continua avisando a partir de 99.
-   - **Incompatibilidade de `.kmz` e `waylines.wpml`**: O formato **`.kmz` não funciona no hub clássico** (funciona apenas no Hub 2, `hub.flylitchi.com`). **Não** se deve alimentar o arquivo `waylines.wpml` ao hub clássico, porque as coordenadas do WPML não têm altitude e todas as alturas da missão virariam 30 m.
+4. **Silent Behaviors and Limits of the KML Importer**:
+   - **Silent Altitude Warnings**: The Classic Hub's KML importer silently converts **height 0 m to 30 m** and truncates any altitude outside the `[-200, 500]` meter range (the plugin warns the user before export about these scenarios).
+   - **Waypoint Ceiling**: The measured waypoint ceiling for KML files on the classic hub is **10,000** (above that, the excess waypoints silently disappear with no warning), while the `.csv` exporter continues to warn starting at 99.
+   - **`.kmz` and `waylines.wpml` Incompatibility**: The **`.kmz` format does not work on the classic hub** (it only works on Hub 2, `hub.flylitchi.com`). You should **not** feed the `waylines.wpml` file to the classic hub, because the WPML coordinates have no altitude and all mission heights would turn into 30 m.
 
-### 2. Exportação e Carga no DJI Fly
-1. **Passos de Carga**:
-   - No aplicativo **DJI Fly** (ou no controle DJI RC / RC 2 / RC Pro), crie e salve uma missão de teste de **1 waypoint** para que o aplicativo crie a estrutura de arquivos e um identificador único (GUID).
-   - Localize a pasta do GUID criada no armazenamento do dispositivo:
+### 2. Export and Loading in DJI Fly
+1. **Loading Steps**:
+   - In the **DJI Fly** app (or on the DJI RC / RC 2 / RC Pro remote controller), create and save a test mission with **1 waypoint** so that the app creates the file structure and a unique identifier (GUID).
+   - Locate the created GUID folder in the device's storage:
      - **Android**: `Android/data/dji.go.v5/files/waypoint`
-     - **iOS / Armazenamento do Controle**: `Files/DJI Fly/wayline_mission/`
-   - Renomeie o arquivo `.kmz` exportado pelo QGC4QGIS com o mesmo nome GUID da pasta.
-   - Substitua o arquivo `.kmz` original localizado dentro da pasta GUID do dispositivo pelo arquivo renomeado gerado pelo plugin.
-2. **Aviso de Não Reeditar no DJI Fly**:
+     - **iOS / Controller Storage**: `Files/DJI Fly/wayline_mission/`
+   - Rename the `.kmz` file exported by QGC4QGIS with the same GUID name as the folder.
+   - Replace the original `.kmz` file located inside the device's GUID folder with the renamed file generated by the plugin.
+2. **Do Not Re-edit in DJI Fly Warning**:
    > [!WARNING]
-   > **Não edite ou salve a missão importada dentro do DJI Fly!**  
-   > Se a missão for reeditada no aplicativo DJI Fly, o app reescreverá a estrutura do arquivo WPML `.kmz`, podendo corromper ou remover os gatilhos de captura de foto por distância/tempo e ações customizadas nos waypoints.
+   > **Do not edit or save the imported mission inside DJI Fly!**  
+   > If the mission is re-edited in the DJI Fly app, the app will rewrite the WPML `.kmz` file structure, which can corrupt or remove distance/time-based photo capture triggers and custom waypoint actions.
 
-### 3. Limitações e Comportamento dos Aplicativos
-- **Limite de Waypoints**:
-  - **Litchi**: limite máximo de **99 waypoints** por missão; o plugin avisa quando a missão passa desse limite.
-  - **DJI Fly**: o teto de waypoints não é documentado publicamente pela DJI; o valor citado pela comunidade é **200**, e o plugin avisa quando a missão passa dele.
-- **Suporte ao Modo Terreno no DJI Fly (WPML)**:
-  - O modo terreno é convertido para altura relativa ao ponto de decolagem, permitindo que o voo continue seguindo o relevo.
-  - O ponto de decolagem é determinado pelo parâmetro `PONTO_DECOLAGEM` (padrão: elevação do primeiro waypoint).
-  - O plugin emite um aviso quando alguma altura relativa calculada fica $\le 0$.
+### 3. Application Limitations and Behavior
+- **Waypoint Limit**:
+  - **Litchi**: maximum limit of **99 waypoints** per mission; the plugin warns when the mission exceeds this limit.
+  - **DJI Fly**: the waypoint ceiling is not publicly documented by DJI; the value cited by the community is **200**, and the plugin warns when the mission exceeds it.
+- **Terrain Mode Support in DJI Fly (WPML)**:
+  - Terrain mode is converted to altitude relative to the takeoff point, allowing the flight to continue following the terrain.
+  - The takeoff point is determined by the `PONTO_DECOLAGEM` parameter (default: elevation of the first waypoint).
+  - The plugin issues a warning when any calculated relative height is $\le 0$.
 
 ---
 
-## 6. Base de Elevação Automática
+## 6. Automatic Elevation Base
 
-O QGC4QGIS inclui um recurso para obtenção automática de dados de elevação do terreno (DEM/DTM) diretamente da internet, permitindo planejar missões com acompanhamento de relevo (*Terrain Following*) sem necessidade de carregar previamente um arquivo raster local.
+QGC4QGIS includes a feature for automatically obtaining terrain elevation data (DEM/DTM) directly from the internet, allowing missions to be planned with terrain tracking (*Terrain Following*) without needing to preload a local raster file.
 
-### 1. Fonte dos Dados e Consistência com o QGC
+### 1. Data Source and Consistency with QGC
 
-- **Fonte**: Copernicus DEM GLO-30 (resolução global de 30 metros), disponibilizado via serviço web REST da Auterion no endpoint `terrain-ce.suite.auterion.com/api/v1/carpet`.
-- **Consistência com o QGroundControl**: Esta é exatamente a **mesma** fonte e API utilizada nativamente pelo QGroundControl (conforme implementado no fonte [`ElevationMapProvider.h`](../src/Terrain/ElevationMapProvider.h)), garantindo que as altitudes de relevo amostradas no arquivo `.plan` sejam idênticas às que o QGC recalcula e consulta internamente.
+- **Source**: Copernicus DEM GLO-30 (30-meter global resolution), made available via Auterion's REST web service at the `terrain-ce.suite.auterion.com/api/v1/carpet` endpoint.
+- **Consistency with QGroundControl**: This is exactly the **same** source and API natively used by QGroundControl (as implemented in the source [`ElevationMapProvider.h`](../src/Terrain/ElevationMapProvider.h)), ensuring that the terrain altitudes sampled in the `.plan` file are identical to those QGC recalculates and queries internally.
 
-### 2. Como Utilizar
+### 2. How to Use It
 
-Você pode baixar a grade de elevação da sua área de missão através de duas interfaces no QGIS:
+You can download the elevation grid for your mission area through two interfaces in QGIS:
 
-1. **Painel Acoplável (Dock Widget)**: No grupo **Terreno**, clique no botão **"Baixar DEM da área…"**. O complemento calculará o envelope da área de missão com a margem configurada, baixará automaticamente o raster de elevação e o adicionará às camadas do projeto QGIS.
-2. **Caixa de Ferramentas de Processamento (Processing Toolbox)**: Utilize o algoritmo `qgc4qgis:baixar_dem_copernicus`. Ele permite especificar a extensão geográfica (polígono ou envelope), a margem de segurança e o caminho de destino do arquivo GeoTIFF gerado.
+1. **Dock Widget**: In the **Terrain** group, click the **"Download area DEM…"** button. The plugin will calculate the mission area envelope with the configured margin, automatically download the elevation raster, and add it to the QGIS project layers.
+2. **Processing Toolbox**: Use the `qgc4qgis:baixar_dem_copernicus` algorithm. It lets you specify the geographic extent (polygon or envelope), the safety margin, and the destination path of the generated GeoTIFF file.
 
-### 3. Parâmetro de Margem
+### 3. Margin Parameter
 
-O parâmetro de **Margem** (expansão da extensão) adiciona um raio de cobertura extra em torno do polígono da missão ao solicitar os dados ao servidor. Essa margem serve para:
-- Garantir a cobertura de elevação em áreas de curva e aceleração de manobra (*turnaround*) localizadas fora do perímetro principal do polígono.
-- Assegurar a amostragem de relevo no ponto de decolagem e nas trajetórias de aproximação até o primeiro waypoint.
+The **Margin** parameter (extent expansion) adds an extra coverage radius around the mission polygon when requesting data from the server. This margin serves to:
+- Ensure elevation coverage in the maneuver curve and acceleration areas (*turnaround*) located outside the main polygon perimeter.
+- Ensure terrain sampling at the takeoff point and along the approach trajectories to the first waypoint.
 
-### 4. Limitações da API
+### 4. API Limitations
 
-- **Resolução Espacial**: Resolução nominal de ~30 metros (1 segundo de arco).
-- **Conexão com a Internet**: Exige acesso ativo à rede durante o download dos ladrilhos (*tiles*).
-- **Teto de Ladrilhos por Requisição**: O servidor limita cada requisição a no máximo **256 ladrilhos (*tiles*)**, o que corresponde a uma caixa delimitadora (*bounding box*) de aproximadamente **$18 \times 18\text{ km}$**. Requisições com caixas delimitadoras maiores são recusadas pelo servidor.
+- **Spatial Resolution**: Nominal resolution of ~30 meters (1 arc second).
+- **Internet Connection**: Requires active network access during tile download (*tiles*).
+- **Tile Ceiling per Request**: The server limits each request to a maximum of **256 tiles (*tiles*)**, which corresponds to a bounding box (*bounding box*) of approximately **$18 \times 18\text{ km}$**. Requests with larger bounding boxes are rejected by the server.
 
-### 5. Atribuição Obrigatória
+### 5. Required Attribution
 
-Conforme os termos de uso do provedor, a utilização dos dados do Copernicus DEM GLO-30 exige a seguinte atribuição de direitos autorais:
+Per the provider's terms of use, using the Copernicus DEM GLO-30 data requires the following copyright attribution:
 
 ```text
 © Airbus Defence and Space GmbH
 ```
 
-### 6. Referencial de Altitude (Geoide EGM2008)
+### 6. Altitude Reference (EGM2008 Geoid)
 
 > [!NOTE]
-> **Convenção de Altitude Ortométrica:**  
-> As alturas fornecidas pelo Copernicus DEM são **ortométricas** (referenciadas ao modelo geoidal **EGM2008** — altitude acima do nível médio do mar), seguindo exatamente a mesma convenção adotada pelo QGroundControl. Elas **não devem ser confundidas com a altura elipsoidal** obtida diretamente por receptores GNSS/GPS sem aplicação do modelo geoidal.
+> **Orthometric Altitude Convention:**  
+> The heights provided by the Copernicus DEM are **orthometric** (referenced to the **EGM2008** geoid model — altitude above mean sea level), following exactly the same convention adopted by QGroundControl. They **should not be confused with the ellipsoidal height** obtained directly from GNSS/GPS receivers without applying the geoid model.
 
-### 7. Compatibilidade com NumPy
+### 7. NumPy Compatibility
 
-O download do DEM **não requer NumPy**, operando diretamente via Python e bindings nativos da GDAL. Desde a versão 0.6.1, o plugin não importa os bindings GDAL ao ser carregado (import tardio, apenas no momento de gravar o DEM). A partir da versão 0.6.2, o plugin também não habilita as exceções da GDAL pela via que importa `osgeo.gdal_array` (binário linkado ao NumPy). Desta forma, **nenhum caminho do plugin (carregamento ou download do DEM) carrega NumPy**, garantindo a operação sem conflitos em ambientes com NumPy 2.x (como o QGIS 4), mesmo quando os bindings GDAL do ambiente foram compilados com NumPy 1.x.
+Downloading the DEM **does not require NumPy**, operating directly via Python and native GDAL bindings. Since version 0.6.1, the plugin does not import the GDAL bindings when loaded (lazy import, only at the moment of writing the DEM). Starting with version 0.6.2, the plugin also does not enable GDAL exceptions through the path that imports `osgeo.gdal_array` (a binary linked against NumPy). This way, **no plugin path (loading or DEM download) loads NumPy**, ensuring conflict-free operation in environments with NumPy 2.x (such as QGIS 4), even when the environment's GDAL bindings were compiled with NumPy 1.x.
 
-### 8. Problemas Conhecidos
+### 8. Known Issues
 
-- **Aviso "A module that was compiled using NumPy 1.x…" no log durante o download do DEM**:
-  Se o traceback *"A module that was compiled using NumPy 1.x..."* aparecer no **log** do QGIS como `WARNING` **enquanto o DEM baixa e carrega normalmente**, trata-se de uma extensão C compilada contra NumPy 1.x sendo importada por outro componente do ambiente e imprimindo o aviso — a operação não falha.
-- **Diálogo "A module that was compiled using NumPy 1.x…" ao instalar**:
-  Se o diálogo *"A module that was compiled using NumPy 1.x..."* aparecer **ao instalar** o complemento, a origem é outro componente do Python do QGIS — típico do QGIS em Flatpak com `numpy` 2.x instalado via `pip` em `/var/data/python/...`, que sombreia o `numpy` do runtime e quebra extensões compiladas contra o `numpy` antigo.
-  - **Correção de ambiente**: Remover esse `numpy` instalado via `pip` em `/var/data/python/...` no Flatpak (o runtime volta a usar o `numpy` casado com seus binários), em vez de fazer downgrade do NumPy.
-  - **Repositório oficial**: A instalação pelo repositório oficial exige que a versão nova esteja previamente publicada lá.
+- **"A module that was compiled using NumPy 1.x…" warning in the log during DEM download**:
+  If the traceback *"A module that was compiled using NumPy 1.x..."* appears in the QGIS **log** as a `WARNING` **while the DEM downloads and loads normally**, this is a C extension compiled against NumPy 1.x being imported by another component of the environment and printing the warning — the operation does not fail.
+- **"A module that was compiled using NumPy 1.x…" dialog when installing**:
+  If the dialog *"A module that was compiled using NumPy 1.x..."* appears **when installing** the plugin, the origin is another component of QGIS's Python — typical of QGIS in Flatpak with `numpy` 2.x installed via `pip` in `/var/data/python/...`, which shadows the runtime's NumPy and breaks extensions compiled against the older NumPy.
+  - **Environment fix**: Remove that `numpy` installed via `pip` in `/var/data/python/...` in the Flatpak (the runtime reverts to using the NumPy paired with its binaries), instead of downgrading NumPy.
+  - **Official repository**: Installation via the official repository requires the new version to already be published there.

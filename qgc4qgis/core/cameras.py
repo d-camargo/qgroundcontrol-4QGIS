@@ -4,7 +4,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-CUSTOM_CAMERA_NAME = "Câmera personalizada (manual)"
+from qgc4qgis.core.i18n import tr
+
+CUSTOM_CAMERA_NAME = tr("Custom camera (manual)")
 
 
 @dataclass

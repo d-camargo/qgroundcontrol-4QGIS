@@ -13,7 +13,7 @@ from qgis.core import (
     QgsVectorLayer,
 )
 from qgis.gui import QgsDockWidget, QgsMapLayerComboBox
-from qgis.PyQt.QtCore import pyqtSignal
+from qgis.PyQt.QtCore import QCoreApplication, pyqtSignal
 from qgis.PyQt.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -59,7 +59,9 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
     def __init__(self, parent: QWidget | None = None):
         """Constructor for QgcPlanningDockWidget."""
-        super().__init__("Planejamento QGC", parent)
+        super().__init__(
+            QCoreApplication.translate("QgcPlanningDockWidget", "QGC Flight Planning"), parent
+        )
         self.setObjectName("QgcPlanningDockWidget")
 
         self.cameras: list[CameraSpec] = load_cameras()
@@ -79,23 +81,23 @@ class QgcPlanningDockWidget(QgsDockWidget):
         main_layout.setContentsMargins(8, 8, 8, 8)
         main_layout.setSpacing(10)
 
-        # 1. Camada e Feição
-        grp_layer = QGroupBox("Camada / Feição de Polígono", main_widget)
+        # 1. Layer and Feature
+        grp_layer = QGroupBox(self.tr("Layer / Polygon Feature"), main_widget)
         lay_layer = QFormLayout(grp_layer)
 
         self.cmb_layer = QgsMapLayerComboBox(grp_layer)
         self.cmb_layer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
         self.cmb_layer.layerChanged.connect(self._on_layer_changed)
-        lay_layer.addRow("Camada:", self.cmb_layer)
+        lay_layer.addRow(self.tr("Layer:"), self.cmb_layer)
 
         self.cmb_feature = QComboBox(grp_layer)
         self.cmb_feature.currentIndexChanged.connect(self._on_feature_changed)
-        lay_layer.addRow("Feição:", self.cmb_feature)
+        lay_layer.addRow(self.tr("Feature:"), self.cmb_feature)
 
         main_layout.addWidget(grp_layer)
 
-        # 2. Seletor de Câmera
-        grp_camera = QGroupBox("Câmera", main_widget)
+        # 2. Camera Selector
+        grp_camera = QGroupBox(self.tr("Camera"), main_widget)
         lay_camera = QVBoxLayout(grp_camera)
 
         self.cmb_camera = QComboBox(grp_camera)
@@ -104,8 +106,8 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.cmb_camera.currentIndexChanged.connect(self._on_camera_changed)
         lay_camera.addWidget(self.cmb_camera)
 
-        # Configurações de Câmera Manual
-        self.grp_custom_camera = QGroupBox("Especificações da Câmera Manual", grp_camera)
+        # Manual Camera Settings
+        self.grp_custom_camera = QGroupBox(self.tr("Manual Camera Specifications"), grp_camera)
         lay_custom = QFormLayout(self.grp_custom_camera)
 
         self.spn_sensor_w = QDoubleSpinBox(self.grp_custom_camera)
@@ -114,7 +116,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_sensor_w.setSuffix(" mm")
         self.spn_sensor_w.setDecimals(1)
         self.spn_sensor_w.valueChanged.connect(self._on_camera_param_changed)
-        lay_custom.addRow("Largura do sensor:", self.spn_sensor_w)
+        lay_custom.addRow(self.tr("Sensor width:"), self.spn_sensor_w)
 
         self.spn_sensor_h = QDoubleSpinBox(self.grp_custom_camera)
         self.spn_sensor_h.setRange(0.1, 100.0)
@@ -122,21 +124,21 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_sensor_h.setSuffix(" mm")
         self.spn_sensor_h.setDecimals(1)
         self.spn_sensor_h.valueChanged.connect(self._on_camera_param_changed)
-        lay_custom.addRow("Altura do sensor:", self.spn_sensor_h)
+        lay_custom.addRow(self.tr("Sensor height:"), self.spn_sensor_h)
 
         self.spn_img_w = QSpinBox(self.grp_custom_camera)
         self.spn_img_w.setRange(1, 100000)
         self.spn_img_w.setValue(7952)
         self.spn_img_w.setSuffix(" px")
         self.spn_img_w.valueChanged.connect(self._on_camera_param_changed)
-        lay_custom.addRow("Largura da imagem:", self.spn_img_w)
+        lay_custom.addRow(self.tr("Image width:"), self.spn_img_w)
 
         self.spn_img_h = QSpinBox(self.grp_custom_camera)
         self.spn_img_h.setRange(1, 100000)
         self.spn_img_h.setValue(5304)
         self.spn_img_h.setSuffix(" px")
         self.spn_img_h.valueChanged.connect(self._on_camera_param_changed)
-        lay_custom.addRow("Altura da imagem:", self.spn_img_h)
+        lay_custom.addRow(self.tr("Image height:"), self.spn_img_h)
 
         self.spn_focal = QDoubleSpinBox(self.grp_custom_camera)
         self.spn_focal.setRange(0.1, 1000.0)
@@ -144,20 +146,20 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_focal.setSuffix(" mm")
         self.spn_focal.setDecimals(1)
         self.spn_focal.valueChanged.connect(self._on_camera_param_changed)
-        lay_custom.addRow("Distância focal:", self.spn_focal)
+        lay_custom.addRow(self.tr("Focal length:"), self.spn_focal)
 
         lay_camera.addWidget(self.grp_custom_camera)
         self.grp_custom_camera.setVisible(False)
 
         main_layout.addWidget(grp_camera)
 
-        # 3. Altura / GSD (com modo travado)
-        grp_alt_gsd = QGroupBox("Altura de Voo / GSD", main_widget)
+        # 3. Altitude / GSD (with locked mode)
+        grp_alt_gsd = QGroupBox(self.tr("Flight Altitude / GSD"), main_widget)
         lay_alt_gsd = QVBoxLayout(grp_alt_gsd)
 
         lay_modes = QHBoxLayout()
-        self.rad_mode_altitude = QRadioButton("Altura de Voo", grp_alt_gsd)
-        self.rad_mode_gsd = QRadioButton("GSD", grp_alt_gsd)
+        self.rad_mode_altitude = QRadioButton(self.tr("Flight Altitude"), grp_alt_gsd)
+        self.rad_mode_gsd = QRadioButton(self.tr("GSD"), grp_alt_gsd)
         self.rad_mode_altitude.setChecked(True)
 
         self.mode_group = QButtonGroup(grp_alt_gsd)
@@ -177,7 +179,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_altitude.setSuffix(" m")
         self.spn_altitude.setDecimals(2)
         self.spn_altitude.valueChanged.connect(self._on_altitude_changed)
-        lay_spin_form.addRow("Altura de Voo:", self.spn_altitude)
+        lay_spin_form.addRow(self.tr("Flight Altitude:"), self.spn_altitude)
 
         self.spn_gsd = QDoubleSpinBox(grp_alt_gsd)
         self.spn_gsd.setRange(0.01, 1000.0)
@@ -186,16 +188,16 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_gsd.setDecimals(2)
         self.spn_gsd.setEnabled(False)
         self.spn_gsd.valueChanged.connect(self._on_gsd_changed)
-        lay_spin_form.addRow("GSD:", self.spn_gsd)
+        lay_spin_form.addRow(self.tr("GSD:"), self.spn_gsd)
 
         self.lbl_footprint = QLabel(grp_alt_gsd)
-        lay_spin_form.addRow("Footprint ajustado:", self.lbl_footprint)
+        lay_spin_form.addRow(self.tr("Adjusted footprint:"), self.lbl_footprint)
 
         lay_alt_gsd.addLayout(lay_spin_form)
         main_layout.addWidget(grp_alt_gsd)
 
-        # 4. Sobreposições, Ângulo, Turnaround e Sentido de Entrada
-        grp_grid_params = QGroupBox("Parâmetros do Voo", main_widget)
+        # 4. Overlaps, Angle, Turnaround, and Entry Location
+        grp_grid_params = QGroupBox(self.tr("Flight Parameters"), main_widget)
         lay_grid_params = QFormLayout(grp_grid_params)
 
         self.spn_overlap_side = QDoubleSpinBox(grp_grid_params)
@@ -203,51 +205,51 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_overlap_side.setValue(70.0)
         self.spn_overlap_side.setSuffix(" %")
         self.spn_overlap_side.valueChanged.connect(self._on_overlap_changed)
-        lay_grid_params.addRow("Sobreposição lateral:", self.spn_overlap_side)
+        lay_grid_params.addRow(self.tr("Side overlap:"), self.spn_overlap_side)
 
         self.spn_overlap_frontal = QDoubleSpinBox(grp_grid_params)
         self.spn_overlap_frontal.setRange(0.0, 99.0)
         self.spn_overlap_frontal.setValue(70.0)
         self.spn_overlap_frontal.setSuffix(" %")
         self.spn_overlap_frontal.valueChanged.connect(self._on_overlap_changed)
-        lay_grid_params.addRow("Sobreposição frontal:", self.spn_overlap_frontal)
+        lay_grid_params.addRow(self.tr("Frontal overlap:"), self.spn_overlap_frontal)
 
         self.spn_angle = QDoubleSpinBox(grp_grid_params)
         self.spn_angle.setRange(-180.0, 180.0)
         self.spn_angle.setValue(0.0)
         self.spn_angle.setSuffix("°")
         self.spn_angle.valueChanged.connect(self._on_grid_param_changed)
-        lay_grid_params.addRow("Ângulo da grade:", self.spn_angle)
+        lay_grid_params.addRow(self.tr("Grid angle:"), self.spn_angle)
 
         self.spn_turnaround = QDoubleSpinBox(grp_grid_params)
         self.spn_turnaround.setRange(0.0, 1000.0)
         self.spn_turnaround.setValue(0.0)
         self.spn_turnaround.setSuffix(" m")
         self.spn_turnaround.valueChanged.connect(self._on_grid_param_changed)
-        lay_grid_params.addRow("Turnaround:", self.spn_turnaround)
+        lay_grid_params.addRow(self.tr("Turnaround:"), self.spn_turnaround)
 
         self.cmb_entry_location = QComboBox(grp_grid_params)
         self.cmb_entry_location.addItems(["Top-Left", "Top-Right", "Bottom-Left", "Bottom-Right"])
         self.cmb_entry_location.currentIndexChanged.connect(self._on_grid_param_changed)
-        lay_grid_params.addRow("Sentido de entrada:", self.cmb_entry_location)
+        lay_grid_params.addRow(self.tr("Entry location:"), self.cmb_entry_location)
 
-        self.chk_refly = QCheckBox("Grade cruzada (Refly 90°)", grp_grid_params)
+        self.chk_refly = QCheckBox(self.tr("Cross grid (Refly 90°)"), grp_grid_params)
         self.chk_refly.toggled.connect(self._on_grid_param_changed)
         lay_grid_params.addRow(self.chk_refly)
 
         main_layout.addWidget(grp_grid_params)
 
-        # 5. Terreno / Elevação
-        grp_terrain = QGroupBox("Terreno / Elevação", main_widget)
+        # 5. Terrain / Elevation
+        grp_terrain = QGroupBox(self.tr("Terrain / Elevation"), main_widget)
         lay_terrain = QFormLayout(grp_terrain)
 
         self.cmb_elevation_layer = QgsMapLayerComboBox(grp_terrain)
         self.cmb_elevation_layer.setFilters(QgsMapLayerProxyModel.RasterLayer)
         self.cmb_elevation_layer.setAllowEmptyLayer(True)
         self.cmb_elevation_layer.layerChanged.connect(self._on_grid_param_changed)
-        lay_terrain.addRow("Camada de elevação:", self.cmb_elevation_layer)
+        lay_terrain.addRow(self.tr("Elevation layer:"), self.cmb_elevation_layer)
 
-        self.btn_download_dem = QPushButton("Baixar DEM da área…", grp_terrain)
+        self.btn_download_dem = QPushButton(self.tr("Download area DEM…"), grp_terrain)
         self.btn_download_dem.clicked.connect(self.download_dem)
         lay_terrain.addRow(self.btn_download_dem)
 
@@ -257,37 +259,37 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_tolerance.setSuffix(" m")
         self.spn_tolerance.setDecimals(1)
         self.spn_tolerance.valueChanged.connect(self._on_grid_param_changed)
-        lay_terrain.addRow("Tolerância do terreno:", self.spn_tolerance)
+        lay_terrain.addRow(self.tr("Terrain tolerance:"), self.spn_tolerance)
 
         main_layout.addWidget(grp_terrain)
 
-        # 6. Estatísticas do Voo
-        grp_stats = QGroupBox("Estatísticas do Voo", main_widget)
+        # 6. Flight Statistics
+        grp_stats = QGroupBox(self.tr("Flight Statistics"), main_widget)
         lay_stats = QFormLayout(grp_stats)
 
         self.lbl_stat_area = QLabel("-", grp_stats)
-        lay_stats.addRow("Área de voo:", self.lbl_stat_area)
+        lay_stats.addRow(self.tr("Flight area:"), self.lbl_stat_area)
 
         self.lbl_stat_distance = QLabel("-", grp_stats)
-        lay_stats.addRow("Distância total:", self.lbl_stat_distance)
+        lay_stats.addRow(self.tr("Total distance:"), self.lbl_stat_distance)
 
         self.lbl_stat_photos = QLabel("-", grp_stats)
-        lay_stats.addRow("Total de fotos:", self.lbl_stat_photos)
+        lay_stats.addRow(self.tr("Total photos:"), self.lbl_stat_photos)
 
         self.lbl_stat_time = QLabel("-", grp_stats)
-        lay_stats.addRow("Tempo estimado de voo:", self.lbl_stat_time)
+        lay_stats.addRow(self.tr("Estimated flight time:"), self.lbl_stat_time)
 
         self.lbl_stat_interval = QLabel("-", grp_stats)
-        lay_stats.addRow("Intervalo entre fotos:", self.lbl_stat_interval)
+        lay_stats.addRow(self.tr("Interval between photos:"), self.lbl_stat_interval)
 
         self.lbl_stat_wp_qgc = QLabel("-", grp_stats)
-        lay_stats.addRow("Waypoints QGC:", self.lbl_stat_wp_qgc)
+        lay_stats.addRow(self.tr("QGC waypoints:"), self.lbl_stat_wp_qgc)
 
         self.lbl_stat_wp_litchi = QLabel("-", grp_stats)
-        lay_stats.addRow("Waypoints Litchi:", self.lbl_stat_wp_litchi)
+        lay_stats.addRow(self.tr("Litchi waypoints:"), self.lbl_stat_wp_litchi)
 
         self.lbl_stat_wp_dji = QLabel("-", grp_stats)
-        lay_stats.addRow("Waypoints DJI:", self.lbl_stat_wp_dji)
+        lay_stats.addRow(self.tr("DJI waypoints:"), self.lbl_stat_wp_dji)
 
         self.lbl_stat_warning = QLabel("", grp_stats)
         self.lbl_stat_warning.setStyleSheet("color: red; font-weight: bold;")
@@ -297,14 +299,16 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         main_layout.addWidget(grp_stats)
 
-        # 7. Exportar para
-        grp_export = QGroupBox("Exportar para", main_widget)
+        # 7. Export to
+        grp_export = QGroupBox(self.tr("Export to"), main_widget)
         lay_export = QFormLayout(grp_export)
 
         self.cmb_trigger_mode = QComboBox(grp_export)
-        self.cmb_trigger_mode.addItems(["Por distância", "Por tempo", "Por foto"])
+        self.cmb_trigger_mode.addItems(
+            [self.tr("By distance"), self.tr("By time"), self.tr("By photo")]
+        )
         self.cmb_trigger_mode.currentIndexChanged.connect(self._on_grid_param_changed)
-        lay_export.addRow("Modo de disparo:", self.cmb_trigger_mode)
+        lay_export.addRow(self.tr("Trigger mode:"), self.cmb_trigger_mode)
 
         self.spn_speed = QDoubleSpinBox(grp_export)
         self.spn_speed.setRange(0.1, 100.0)
@@ -312,7 +316,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_speed.setSuffix(" m/s")
         self.spn_speed.setDecimals(1)
         self.spn_speed.valueChanged.connect(self._on_grid_param_changed)
-        lay_export.addRow("Velocidade de voo:", self.spn_speed)
+        lay_export.addRow(self.tr("Flight speed:"), self.spn_speed)
 
         self.spn_gimbal_pitch = QDoubleSpinBox(grp_export)
         self.spn_gimbal_pitch.setRange(-90.0, 20.0)
@@ -320,7 +324,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_gimbal_pitch.setSuffix("°")
         self.spn_gimbal_pitch.setDecimals(1)
         self.spn_gimbal_pitch.valueChanged.connect(self._on_grid_param_changed)
-        lay_export.addRow("Ângulo de gimbal:", self.spn_gimbal_pitch)
+        lay_export.addRow(self.tr("Gimbal angle:"), self.spn_gimbal_pitch)
 
         self.spn_waypoint_wait = QDoubleSpinBox(grp_export)
         self.spn_waypoint_wait.setRange(0.0, 3600.0)
@@ -328,38 +332,47 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.spn_waypoint_wait.setSuffix(" s")
         self.spn_waypoint_wait.setDecimals(1)
         self.spn_waypoint_wait.valueChanged.connect(self._on_grid_param_changed)
-        lay_export.addRow("Espera no waypoint:", self.spn_waypoint_wait)
+        lay_export.addRow(self.tr("Waypoint wait:"), self.spn_waypoint_wait)
 
-        self.btn_export_litchi = QPushButton("Exportar Litchi (.csv)…", grp_export)
+        self.btn_export_litchi = QPushButton(self.tr("Export Litchi (.csv)…"), grp_export)
         self.btn_export_litchi.clicked.connect(self.export_litchi)
         lay_export.addRow(self.btn_export_litchi)
 
-        self.btn_export_kml = QPushButton("Exportar Litchi Hub clássico (.kml)…", grp_export)
+        self.btn_export_kml = QPushButton(self.tr("Export classic Litchi Hub (.kml)…"), grp_export)
         self.btn_export_kml.setToolTip(
-            'KML para flylitchi.com/hub → Import, com "Add take photo action" marcado. Não leva proa, gimbal nem velocidade — para isso use o .csv.'
+            self.tr(
+                'KML for flylitchi.com/hub → Import, with "Add take photo action" checked. '
+                "Does not carry heading, gimbal, or speed — use the .csv for that."
+            )
         )
         self.btn_export_kml.clicked.connect(self.export_kml)
         lay_export.addRow(self.btn_export_kml)
 
-        self.btn_export_dji = QPushButton("Exportar DJI Fly / Litchi Hub 2 (.kmz)…", grp_export)
+        self.btn_export_dji = QPushButton(
+            self.tr("Export DJI Fly / Litchi Hub 2 (.kmz)…"), grp_export
+        )
         self.btn_export_dji.setToolTip(
-            "KMZ WPML: abre no DJI Fly e é importado como missão pelo Litchi Hub 2 (hub.flylitchi.com → Importar missão). O hub clássico (flylitchi.com/hub) NÃO lê .kmz — para ele use o .csv ou o .kml."
+            self.tr(
+                "KMZ WPML: opens in DJI Fly and is imported as a mission by Litchi Hub 2 "
+                "(hub.flylitchi.com → Import mission). The classic hub (flylitchi.com/hub) "
+                "does NOT read .kmz — for that use the .csv or the .kml."
+            )
         )
         self.btn_export_dji.clicked.connect(self.export_dji)
         lay_export.addRow(self.btn_export_dji)
 
         main_layout.addWidget(grp_export)
 
-        # 8. Botões de Ação
-        self.btn_generate = QPushButton("Gerar Grade de Voo", main_widget)
+        # 8. Action Buttons
+        self.btn_generate = QPushButton(self.tr("Generate Flight Grid"), main_widget)
         self.btn_generate.clicked.connect(self.generate_grid)
         main_layout.addWidget(self.btn_generate)
 
-        self.btn_export_plan = QPushButton("Exportar .plan…", main_widget)
+        self.btn_export_plan = QPushButton(self.tr("Export .plan…"), main_widget)
         self.btn_export_plan.clicked.connect(self.export_plan)
         main_layout.addWidget(self.btn_export_plan)
 
-        self.btn_add_layers = QPushButton("Adicionar camadas ao projeto", main_widget)
+        self.btn_add_layers = QPushButton(self.tr("Add layers to project"), main_widget)
         self.btn_add_layers.clicked.connect(self.add_layers_to_project)
         main_layout.addWidget(self.btn_add_layers)
 
@@ -371,7 +384,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.scroll_area.setWidget(main_widget)
         self.setWidget(self.scroll_area)
 
-        # Inicializa a camada e cálculo inicial
+        # Initialize layer and initial calculation
         self._on_layer_changed()
         self._on_camera_changed()
 
@@ -397,7 +410,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         """Update feature combo box when selected map layer changes."""
         self.cmb_feature.blockSignals(True)
         self.cmb_feature.clear()
-        self.cmb_feature.addItem("Todas as feições", None)
+        self.cmb_feature.addItem(self.tr("All features"), None)
 
         layer = self.cmb_layer.currentLayer()
         if isinstance(layer, QgsVectorLayer) and layer.isValid():
@@ -408,7 +421,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
                 if name_field and feat.attribute(name_field):
                     label = f"{feat.attribute(name_field)} (id: {feat_id})"
                 else:
-                    label = f"Feição {feat_id}"
+                    label = self.tr("Feature {feat_id}").format(feat_id=feat_id)
                 self.cmb_feature.addItem(label, feat_id)
         self.cmb_feature.blockSignals(False)
         self._update_preview()
@@ -764,12 +777,16 @@ class QgcPlanningDockWidget(QgsDockWidget):
         self.lbl_stat_wp_qgc.setText(str(len(route_qgc.waypoints)))
 
         if wp_count > 99:
-            self.lbl_stat_wp_litchi.setText(f"{wp_count} (excede limite: 99)")
+            self.lbl_stat_wp_litchi.setText(
+                self.tr("{count} (exceeds limit: 99)").format(count=wp_count)
+            )
         else:
             self.lbl_stat_wp_litchi.setText(str(wp_count))
 
         if wp_count > 200:
-            self.lbl_stat_wp_dji.setText(f"{wp_count} (excede limite: 200)")
+            self.lbl_stat_wp_dji.setText(
+                self.tr("{count} (exceeds limit: 200)").format(count=wp_count)
+            )
         else:
             self.lbl_stat_wp_dji.setText(str(wp_count))
 
@@ -777,9 +794,17 @@ class QgcPlanningDockWidget(QgsDockWidget):
         if stats.is_interval_too_short and stats.warning_message:
             warnings.append(stats.warning_message)
         if wp_count > 99:
-            warnings.append(f"Número de waypoints ({wp_count}) excede o limite do Litchi (99).")
+            warnings.append(
+                self.tr("Waypoint count ({count}) exceeds the Litchi limit (99).").format(
+                    count=wp_count
+                )
+            )
         if wp_count > 200:
-            warnings.append(f"Número de waypoints ({wp_count}) excede o limite do DJI (200).")
+            warnings.append(
+                self.tr("Waypoint count ({count}) exceeds the DJI limit (200).").format(
+                    count=wp_count
+                )
+            )
 
         if warnings:
             self.lbl_stat_warning.setText("\n".join(warnings))
@@ -839,7 +864,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return
 
         self.gridGenerated.emit(params)
@@ -865,20 +890,20 @@ class QgcPlanningDockWidget(QgsDockWidget):
             pass
 
     def export_plan(self, file_path: str | None = None) -> str | None:
-        """Export flight plan to a QGroundControl (.plan) file using ExportPlanAlgorithm (Fase 3)."""
+        """Export flight plan to a QGroundControl (.plan) file using ExportPlanAlgorithm (Phase 3)."""
         params = self.get_parameters()
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return None
 
         if not file_path:
             file_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "Exportar Plano QGC",
+                self.tr("Export QGC Plan"),
                 "",
-                "QGroundControl Plan (*.plan);;Todos os Arquivos (*)",
+                self.tr("QGroundControl Plan (*.plan);;All Files (*)"),
             )
 
         if not file_path:
@@ -914,15 +939,15 @@ class QgcPlanningDockWidget(QgsDockWidget):
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return None
 
         if not file_path:
             file_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "Exportar Litchi CSV",
+                self.tr("Export Litchi CSV"),
                 "",
-                "Litchi Mission (*.csv);;Todos os Arquivos (*)",
+                self.tr("Litchi Mission (*.csv);;All Files (*)"),
             )
 
         if not file_path:
@@ -948,7 +973,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
             processing.run("qgc4qgis:exportar_litchi_csv", proc_params)
         except QgsProcessingException as e:
             if self.isVisible():
-                QMessageBox.critical(self, "Erro na exportação Litchi", str(e))
+                QMessageBox.critical(self, self.tr("Litchi export error"), str(e))
         except Exception:
             # Headless/standalone: processing framework unavailable
             pass
@@ -961,15 +986,15 @@ class QgcPlanningDockWidget(QgsDockWidget):
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return None
 
         if not file_path:
             file_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "Exportar Litchi Mission Hub KML",
+                self.tr("Export Litchi Mission Hub KML"),
                 "",
-                "Litchi Mission Hub KML (*.kml);;Todos os Arquivos (*)",
+                self.tr("Litchi Mission Hub KML (*.kml);;All Files (*)"),
             )
 
         if not file_path:
@@ -995,7 +1020,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
             processing.run("qgc4qgis:exportar_litchi_kml", proc_params)
         except QgsProcessingException as e:
             if self.isVisible():
-                QMessageBox.critical(self, "Erro na exportação KML", str(e))
+                QMessageBox.critical(self, self.tr("KML export error"), str(e))
         except Exception:
             # Headless/standalone: processing framework unavailable
             pass
@@ -1008,15 +1033,15 @@ class QgcPlanningDockWidget(QgsDockWidget):
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return None
 
         if not file_path:
             file_path, _ = QFileDialog.getSaveFileName(
                 self,
-                "Exportar DJI Fly KMZ",
+                self.tr("Export DJI Fly KMZ"),
                 "",
-                "DJI Fly Mission (*.kmz);;Todos os Arquivos (*)",
+                self.tr("DJI Fly Mission (*.kmz);;All Files (*)"),
             )
 
         if not file_path:
@@ -1042,7 +1067,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
             processing.run("qgc4qgis:exportar_dji_kmz", proc_params)
         except QgsProcessingException as e:
             if self.isVisible():
-                QMessageBox.critical(self, "Erro na exportação DJI", str(e))
+                QMessageBox.critical(self, self.tr("DJI export error"), str(e))
         except Exception:
             # Headless/standalone: processing framework unavailable
             pass
@@ -1050,12 +1075,12 @@ class QgcPlanningDockWidget(QgsDockWidget):
         return file_path
 
     def add_layers_to_project(self) -> None:
-        """Generate flight survey grid and load output layer into the QGIS project (Fase 4)."""
+        """Generate flight survey grid and load output layer into the QGIS project (Phase 4)."""
         params = self.get_parameters()
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return
 
         self.gridGenerated.emit(params)
@@ -1074,7 +1099,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
             else:
                 proc_params["INPUT"] = layer
 
-            proc_params["OUTPUT"] = "memory:Grade de Voo"
+            proc_params["OUTPUT"] = f"memory:{self.tr('Flight Grid')}"
             try:
                 processing.runAndLoadResults("qgc4qgis:gerar_grade_voo", proc_params)
             except AttributeError:
@@ -1089,7 +1114,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         layer = params.get("INPUT")
 
         if layer is None or not isinstance(layer, QgsVectorLayer) or not layer.isValid():
-            QMessageBox.warning(self, "Aviso", "Selecione uma camada de polígonos válida.")
+            QMessageBox.warning(self, self.tr("Warning"), self.tr("Select a valid polygon layer."))
             return
 
         try:
@@ -1112,7 +1137,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
             out_path = res.get("OUTPUT") if isinstance(res, dict) else None
 
             if out_path:
-                dem_layer = QgsRasterLayer(out_path, "DEM Copernicus")
+                dem_layer = QgsRasterLayer(out_path, self.tr("Copernicus DEM"))
                 if dem_layer.isValid():
                     meta = dem_layer.metadata()
                     meta.setAbstract(ATTRIBUTION)

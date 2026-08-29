@@ -1,6 +1,7 @@
 """Processing provider implementation for QGC4QGIS plugin."""
 
 from qgis.core import QgsProcessingProvider
+from qgis.PyQt.QtCore import QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 
 from qgc4qgis.processing.alg_download_dem import DownloadDemAlgorithm
@@ -14,6 +15,10 @@ from qgc4qgis.processing.alg_survey_grid import SurveyGridAlgorithm
 
 class Qgc4QgisProvider(QgsProcessingProvider):
     """QGIS Processing provider for QGC4QGIS algorithms."""
+
+    def tr(self, string: str) -> str:
+        """Return the translated string using the class context."""
+        return QCoreApplication.translate("Qgc4QgisProvider", string)
 
     def id(self) -> str:
         """Return unique provider identifier."""

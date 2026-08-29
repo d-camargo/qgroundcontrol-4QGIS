@@ -203,7 +203,7 @@ def test_save_litchi_csv_warnings():
     with tempfile.TemporaryDirectory() as tmpdir:
         out_path = Path(tmpdir) / "route_100.csv"
         warnings = save_litchi_csv(out_path, route_100)
-        assert any("99" in w and "excede" in w for w in warnings)
+        assert any("99" in w and "exceeds" in w for w in warnings)
 
     # 2. Test pitch out of range warning
     wp_invalid_pitch = RouteWaypoint(lat=10.0, lon=20.0, altura=50.0, gimbal_pitch=30.0)
@@ -211,7 +211,7 @@ def test_save_litchi_csv_warnings():
     with tempfile.TemporaryDirectory() as tmpdir:
         out_path = Path(tmpdir) / "route_pitch.csv"
         warnings = save_litchi_csv(out_path, route_pitch)
-        assert any("pitch" in w.lower() and "fora da faixa" in w.lower() for w in warnings)
+        assert any("pitch" in w.lower() and "outside the range" in w.lower() for w in warnings)
 
     # 3. Test altitude out of range warning (-250m and 600m)
     wp_low_alt = RouteWaypoint(lat=10.0, lon=20.0, altura=-250.0)
@@ -300,10 +300,10 @@ def test_validate_litchi_route_photo_action_warning():
 
     warnings_dist = validate_litchi_route(route_dist)
     expected_warning = (
-        'Modo de disparo "POR_DISTANCIA": o CSV não traz ação "Take Photo" por waypoint '
-        "— os waypoints ficam só nas pontas dos transectos e a captura depende do intervalo "
-        "(photo_distinterval/photo_timeinterval). Para uma ação de foto em cada centro de foto, "
-        'use o modo de disparo "Por foto".'
+        'Trigger mode "POR_DISTANCIA": the CSV does not carry a "Take Photo" action per waypoint '
+        "— waypoints only sit at the ends of transects and the capture depends on the interval "
+        "(photo_distinterval/photo_timeinterval). For a photo action at every photo center, "
+        'use trigger mode "By photo".'
     )
     assert expected_warning in warnings_dist
 

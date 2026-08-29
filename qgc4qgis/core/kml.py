@@ -6,6 +6,7 @@ Targeted for classic Litchi Mission Hub (flylitchi.com/hub) where the importer i
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from qgc4qgis.core.i18n import tr
 from qgc4qgis.core.route import Route
 
 # Altitude bounds for Litchi KML [-200..500]
@@ -27,8 +28,11 @@ def validate_litchi_kml_route(route: Route) -> list[str]:
     """
     warnings: list[str] = list(route.avisos) if route.avisos else []
     warnings.append(
-        "O KML não transporta proa, gimbal, velocidade, curva nem POI: "
-        "o Litchi aplica os padrões dele. Ajuste no Mission Hub após importar, ou use o .csv, que leva tudo."
+        tr("KML does not carry heading, gimbal, speed, curve, or POI: ")
+        + tr(
+            "Litchi applies its own defaults. Adjust in Mission Hub after importing, "
+            "or use the .csv, which carries everything."
+        )
     )
 
     waypoints = route.waypoints if route.waypoints else []
@@ -36,21 +40,28 @@ def validate_litchi_kml_route(route: Route) -> list[str]:
 
     if n > MAX_HUB_WAYPOINTS:
         warnings.append(
-            f"Número de waypoints ({n}) excede o teto do Mission Hub ({MAX_HUB_WAYPOINTS}); "
-            "os excedentes são descartados em silêncio na importação."
+            tr(
+                "Number of waypoints ({n}) exceeds the Mission Hub ceiling ({MAX_HUB_WAYPOINTS}); "
+            ).format(n=n, MAX_HUB_WAYPOINTS=MAX_HUB_WAYPOINTS)
+            + tr("the excess is silently discarded on import.")
         )
 
     for i, wp in enumerate(waypoints, start=1):
         a = float(wp.altura)
         if a < MIN_KML_ALTITUDE or a > MAX_KML_ALTITUDE:
             warnings.append(
-                f"Altura de {a:.2f} m no waypoint {i} fora da faixa [{MIN_KML_ALTITUDE}, {MAX_KML_ALTITUDE}]: "
-                "o Mission Hub trunca para o limite."
+                tr(
+                    "Height of {a:.2f} m at waypoint {i} outside the range "
+                    "[{MIN_KML_ALTITUDE}, {MAX_KML_ALTITUDE}]: "
+                ).format(
+                    a=a, i=i, MIN_KML_ALTITUDE=MIN_KML_ALTITUDE, MAX_KML_ALTITUDE=MAX_KML_ALTITUDE
+                )
+                + tr("Mission Hub truncates it to the limit.")
             )
         if f"{a:.2f}" in ("0.00", "-0.00"):
             warnings.append(
-                f"Altura do waypoint {i} é zero no KML: "
-                "o Mission Hub substitui altura zero por 30 m sem avisar."
+                tr("Height of waypoint {i} is zero in the KML: ").format(i=i)
+                + tr("Mission Hub replaces zero height with 30 m without warning.")
             )
 
     return warnings
@@ -66,7 +77,7 @@ def route_to_litchi_kml(route: Route, name: str = "QGC4QGIS Mission") -> str:
     """
     waypoints = route.waypoints if route.waypoints else []
     if not waypoints:
-        raise ValueError("Rota sem waypoints: nada a exportar para KML.")
+        raise ValueError(tr("Route has no waypoints: nothing to export to KML."))
 
     kml = ET.Element(f"{{{KML_NS}}}kml")
     doc = ET.SubElement(kml, f"{{{KML_NS}}}Document")

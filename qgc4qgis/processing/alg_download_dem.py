@@ -12,12 +12,17 @@ from qgis.core import (
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
 )
+from qgis.PyQt.QtCore import QCoreApplication
 
 from qgc4qgis.core.elevation import ATTRIBUTION, download_dem
 
 
 class DownloadDemAlgorithm(QgsProcessingAlgorithm):
     """QGIS Processing Algorithm to download Copernicus DEM (GLO-30) raster data."""
+
+    def tr(self, string: str) -> str:
+        """Return the translated string using the class context."""
+        return QCoreApplication.translate("DownloadDemAlgorithm", string)
 
     INPUT = "INPUT"
     MARGEM = "MARGEM"
@@ -29,11 +34,11 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
 
     def displayName(self) -> str:
         """Return localized human-readable algorithm name."""
-        return "Baixar DEM Copernicus da área"
+        return self.tr("Download Copernicus DEM for area")
 
     def group(self) -> str:
         """Return localized group name."""
-        return "Planejamento de Voo"
+        return self.tr("Flight Planning")
 
     def groupId(self) -> str:
         """Return unique group identifier."""
@@ -45,18 +50,18 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self) -> str:
         """Return short help text for algorithm GUI."""
-        return (
-            "Baixa o modelo digital de elevação (DEM) Copernicus (GLO-30) para a extensão "
-            "da camada de entrada com uma margem de segurança configurável.\n\n"
-            f"Fonte: {ATTRIBUTION}"
-        )
+        return self.tr(
+            "Downloads the Copernicus (GLO-30) digital elevation model (DEM) for the "
+            "extent of the input layer, with a configurable safety margin.\n\n"
+            "Source: {attribution}"
+        ).format(attribution=ATTRIBUTION)
 
     def initAlgorithm(self, config=None) -> None:
         """Define algorithm parameters and outputs."""
         self.addParameter(
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
-                "Camada de polígonos",
+                self.tr("Polygon layer"),
                 [QgsProcessing.TypeVectorPolygon],
             )
         )
@@ -64,7 +69,7 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.MARGEM,
-                "Margem de segurança (m)",
+                self.tr("Safety margin (m)"),
                 QgsProcessingParameterNumber.Double,
                 defaultValue=250.0,
                 minValue=0.0,
@@ -74,7 +79,7 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                "DEM de saída",
+                self.tr("Output DEM"),
             )
         )
 
@@ -123,6 +128,8 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
                 feedback=feedback,
             )
         except (ValueError, RuntimeError) as exc:
-            raise QgsProcessingException(f"Erro ao baixar DEM Copernicus: {exc}") from exc
+            raise QgsProcessingException(
+                self.tr("Error downloading Copernicus DEM: {error}").format(error=exc)
+            ) from exc
 
         return {self.OUTPUT: out_path}

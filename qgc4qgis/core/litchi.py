@@ -5,6 +5,7 @@ import io
 from pathlib import Path
 from typing import Any
 
+from qgc4qgis.core.i18n import tr
 from qgc4qgis.core.missionitems import DistanceMode
 from qgc4qgis.core.route import Route
 
@@ -74,19 +75,34 @@ def validate_litchi_route(
 
     if len(waypoints) > MAX_LITCHI_WAYPOINTS:
         warnings.append(
-            f"Número de waypoints ({len(waypoints)}) excede o limite do Litchi ({MAX_LITCHI_WAYPOINTS})."
+            tr(
+                "Number of waypoints ({n_waypoints}) exceeds the Litchi limit ({MAX_LITCHI_WAYPOINTS})."
+            ).format(n_waypoints=len(waypoints), MAX_LITCHI_WAYPOINTS=MAX_LITCHI_WAYPOINTS)
         )
 
     for i, wp in enumerate(waypoints):
         pitch = wp.gimbal_pitch if wp.gimbal_pitch is not None else default_gimbal_pitch
         if pitch < MIN_GIMBAL_PITCH or pitch > MAX_GIMBAL_PITCH:
             warnings.append(
-                f"Gimbal pitch ({pitch:.1f}°) no waypoint {i + 1} fora da faixa [{MIN_GIMBAL_PITCH:.1f}, {MAX_GIMBAL_PITCH:.1f}]."
+                tr(
+                    "Gimbal pitch ({pitch:.1f}°) at waypoint {wp_index} outside the range "
+                    "[{MIN_GIMBAL_PITCH:.1f}, {MAX_GIMBAL_PITCH:.1f}]."
+                ).format(
+                    pitch=pitch,
+                    wp_index=i + 1,
+                    MIN_GIMBAL_PITCH=MIN_GIMBAL_PITCH,
+                    MAX_GIMBAL_PITCH=MAX_GIMBAL_PITCH,
+                )
             )
 
         if wp.altura < MIN_ALTITUDE or wp.altura > MAX_ALTITUDE:
             warnings.append(
-                f"Altitude ({wp.altura:.1f}m) no waypoint {i + 1} fora da faixa [{MIN_ALTITUDE:.1f}, {MAX_ALTITUDE:.1f}]."
+                tr(
+                    "Altitude ({wp.altura:.1f}m) at waypoint {wp_index} outside the range "
+                    "[{MIN_ALTITUDE:.1f}, {MAX_ALTITUDE:.1f}]."
+                ).format(
+                    wp=wp, wp_index=i + 1, MIN_ALTITUDE=MIN_ALTITUDE, MAX_ALTITUDE=MAX_ALTITUDE
+                )
             )
 
     modo = getattr(route, "modo_disparo", getattr(route, "trigger_mode", ""))
@@ -106,7 +122,12 @@ def validate_litchi_route(
                 break
         if not has_photo_action:
             warnings.append(
-                f'Modo de disparo "{modo}": o CSV não traz ação "Take Photo" por waypoint — os waypoints ficam só nas pontas dos transectos e a captura depende do intervalo (photo_distinterval/photo_timeinterval). Para uma ação de foto em cada centro de foto, use o modo de disparo "Por foto".'
+                tr(
+                    'Trigger mode "{modo}": the CSV does not carry a "Take Photo" action per waypoint '
+                    "— waypoints only sit at the ends of transects and the capture depends on the interval "
+                    "(photo_distinterval/photo_timeinterval). For a photo action at every photo center, "
+                    'use trigger mode "By photo".'
+                ).format(modo=modo)
             )
 
     return warnings

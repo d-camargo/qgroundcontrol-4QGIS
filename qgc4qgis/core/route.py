@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from qgc4qgis.core.geo import AEQDProjection, geodesic_azimuth
+from qgc4qgis.core.i18n import tr
 from qgc4qgis.core.missionitems import DistanceMode
 
 
@@ -252,7 +253,9 @@ def route_from_transects(
 
     if max_waypoints > 0 and len(waypoints) > max_waypoints:
         warnings_list.append(
-            f"Número de waypoints ({len(waypoints)}) excede o limite ({max_waypoints})."
+            tr("Number of waypoints ({n_waypoints}) exceeds the limit ({max_waypoints}).").format(
+                n_waypoints=len(waypoints), max_waypoints=max_waypoints
+            )
         )
 
     return Route(
@@ -294,13 +297,18 @@ def rebase_route_to_takeoff(route: Route, takeoff_elevation: float) -> Route:
 
     warnings = list(route.avisos)
     warnings.append(
-        f"Modo terreno convertido para altura relativa ao ponto de decolagem (elevação {takeoff_elevation:.1f} m); alturas de {min_alt:.1f} m a {max_alt:.1f} m."
+        tr(
+            "Terrain mode converted to height relative to the takeoff point "
+            "(elevation {takeoff_elevation:.1f} m); heights from {min_alt:.1f} m to {max_alt:.1f} m."
+        ).format(takeoff_elevation=takeoff_elevation, min_alt=min_alt, max_alt=max_alt)
     )
 
     le_zero_count = sum(1 for wp in new_waypoints if wp.altura <= 0)
     if le_zero_count > 0:
         warnings.append(
-            f"Altura relativa ≤ 0 em {le_zero_count} waypoint(s): a rota passa abaixo do ponto de decolagem."
+            tr(
+                "Relative height ≤ 0 in {le_zero_count} waypoint(s): the route goes below the takeoff point."
+            ).format(le_zero_count=le_zero_count)
         )
 
     return Route(
