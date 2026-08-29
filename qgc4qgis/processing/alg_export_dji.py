@@ -99,7 +99,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr("Input layer (Polygons or Lines)"),
-                [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
+                [QgsProcessing.SourceType.TypeVectorPolygon, QgsProcessing.SourceType.TypeVectorLine],
             )
         )
 
@@ -116,7 +116,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
                 self.tr("Flight altitude (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=100.0,
                 minValue=0.0,
             )
@@ -126,7 +126,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.GSD,
                 self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -136,7 +136,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
                 self.tr("Side overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -147,7 +147,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
                 self.tr("Frontal overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -158,7 +158,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLE,
                 self.tr("Grid angle (degrees)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
                 maxValue=180.0,
@@ -169,7 +169,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
                 self.tr("Turnaround distance (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -196,7 +196,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
                 self.tr("Manual camera: Sensor width (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.9,
                 minValue=0.0,
                 optional=True,
@@ -207,7 +207,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
                 self.tr("Manual camera: Sensor height (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=24.0,
                 minValue=0.0,
                 optional=True,
@@ -218,7 +218,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
                 self.tr("Manual camera: Image width (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=7952,
                 minValue=0,
                 optional=True,
@@ -229,7 +229,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
                 self.tr("Manual camera: Image height (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=5304,
                 minValue=0,
                 optional=True,
@@ -240,7 +240,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
                 self.tr("Manual camera: Focal length (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.0,
                 minValue=0.0,
                 optional=True,
@@ -260,7 +260,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SPEED,
                 self.tr("Speed (m/s)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=5.0,
                 minValue=0.1,
             )
@@ -270,7 +270,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.GIMBAL_PITCH,
                 self.tr("Gimbal angle (degrees)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=-90.0,
                 minValue=-90.0,
                 maxValue=20.0,
@@ -281,7 +281,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.WAYPOINT_WAIT,
                 self.tr("Wait at waypoint (s)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -318,7 +318,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TRANSITIONAL_SPEED,
                 self.tr("Transitional speed (m/s)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=5.0,
                 minValue=0.1,
             )
@@ -346,7 +346,7 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
                 self.tr("Terrain tolerance (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=10.0,
                 minValue=0.1,
             )
@@ -514,10 +514,11 @@ class ExportDjiAlgorithm(QgsProcessingAlgorithm):
                     all_transects.extend(geo_transects)
             else:
                 # LineString geometry fallback
-                if geom_wgs84.isMultipart():
-                    lines = geom_wgs84.asMultiPolyline()
-                else:
-                    lines = [geom_wgs84.asPolyline()]
+                lines = (
+                    geom_wgs84.asMultiPolyline()
+                    if geom_wgs84.isMultipart()
+                    else [geom_wgs84.asPolyline()]
+                )
 
                 for line in lines:
                     if not line:

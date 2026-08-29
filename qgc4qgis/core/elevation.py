@@ -292,7 +292,7 @@ def fetch_carpet(url: str) -> dict:
     req = QgsBlockingNetworkRequest()
     net_req = QNetworkRequest(QUrl(url))
     err = req.get(net_req)
-    if err != QgsBlockingNetworkRequest.NoError:
+    if err != QgsBlockingNetworkRequest.ErrorCode.NoError:
         msg = (
             req.errorMessage()
             or req.reply().errorString()

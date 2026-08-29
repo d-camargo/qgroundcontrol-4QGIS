@@ -97,7 +97,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr("Input layer (Polygons or Lines)"),
-                [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
+                [QgsProcessing.SourceType.TypeVectorPolygon, QgsProcessing.SourceType.TypeVectorLine],
             )
         )
 
@@ -114,7 +114,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
                 self.tr("Flight altitude (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=100.0,
                 minValue=0.0,
             )
@@ -124,7 +124,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.GSD,
                 self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -134,7 +134,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
                 self.tr("Side overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -145,7 +145,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
                 self.tr("Frontal overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -156,7 +156,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLE,
                 self.tr("Grid angle (degrees)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
                 maxValue=180.0,
@@ -167,7 +167,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
                 self.tr("Turnaround distance (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -194,7 +194,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
                 self.tr("Manual camera: Sensor width (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.9,
                 minValue=0.0,
                 optional=True,
@@ -205,7 +205,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
                 self.tr("Manual camera: Sensor height (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=24.0,
                 minValue=0.0,
                 optional=True,
@@ -216,7 +216,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
                 self.tr("Manual camera: Image width (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=7952,
                 minValue=0,
                 optional=True,
@@ -227,7 +227,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
                 self.tr("Manual camera: Image height (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=5304,
                 minValue=0,
                 optional=True,
@@ -238,7 +238,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
                 self.tr("Manual camera: Focal length (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.0,
                 minValue=0.0,
                 optional=True,
@@ -249,7 +249,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.CRUISE_SPEED,
                 self.tr("Cruise speed (m/s)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=15.0,
                 minValue=0.1,
             )
@@ -259,7 +259,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.HOVER_SPEED,
                 self.tr("Hover speed (m/s)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=5.0,
                 minValue=0.1,
             )
@@ -296,7 +296,7 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TOLERANCE,
                 self.tr("Terrain tolerance (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=10.0,
                 minValue=0.1,
             )
@@ -495,10 +495,11 @@ class ExportPlanAlgorithm(QgsProcessingAlgorithm):
                     items.append(survey_item)
             else:
                 # LineString geometry fallback
-                if geom_wgs84.isMultipart():
-                    lines = geom_wgs84.asMultiPolyline()
-                else:
-                    lines = [geom_wgs84.asPolyline()]
+                lines = (
+                    geom_wgs84.asMultiPolyline()
+                    if geom_wgs84.isMultipart()
+                    else [geom_wgs84.asPolyline()]
+                )
 
                 for line in lines:
                     if not line:

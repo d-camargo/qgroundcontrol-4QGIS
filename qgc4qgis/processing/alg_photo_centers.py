@@ -105,7 +105,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr("Input layer (Polygons or Lines)"),
-                [QgsProcessing.TypeVectorPolygon, QgsProcessing.TypeVectorLine],
+                [QgsProcessing.SourceType.TypeVectorPolygon, QgsProcessing.SourceType.TypeVectorLine],
             )
         )
 
@@ -122,7 +122,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
                 self.tr("Flight altitude (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=100.0,
                 minValue=0.0,
             )
@@ -132,7 +132,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.GSD,
                 self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -142,7 +142,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
                 self.tr("Side overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -153,7 +153,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
                 self.tr("Frontal overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -164,7 +164,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLE,
                 self.tr("Grid angle (degrees)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
                 maxValue=180.0,
@@ -175,7 +175,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
                 self.tr("Turnaround distance (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -202,7 +202,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
                 self.tr("Manual camera: Sensor width (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.9,
                 minValue=0.0,
                 optional=True,
@@ -213,7 +213,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
                 self.tr("Manual camera: Sensor height (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=24.0,
                 minValue=0.0,
                 optional=True,
@@ -224,7 +224,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
                 self.tr("Manual camera: Image width (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=7952,
                 minValue=0,
                 optional=True,
@@ -235,7 +235,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
                 self.tr("Manual camera: Image height (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=5304,
                 minValue=0,
                 optional=True,
@@ -246,7 +246,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
                 self.tr("Manual camera: Focal length (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.0,
                 minValue=0.0,
                 optional=True,
@@ -257,7 +257,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_CENTERS,
                 self.tr("Photo centers (Points)"),
-                QgsProcessing.TypeVectorPoint,
+                QgsProcessing.SourceType.TypeVectorPoint,
             )
         )
 
@@ -265,7 +265,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT_FOOTPRINTS,
                 self.tr("Photo footprints (Polygons)"),
-                QgsProcessing.TypeVectorPolygon,
+                QgsProcessing.SourceType.TypeVectorPolygon,
             )
         )
 
@@ -320,25 +320,25 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         center_fields = QgsFields()
-        center_fields.append(QgsField("id", QVariant.Int))
-        center_fields.append(QgsField("transect_id", QVariant.Int))
-        center_fields.append(QgsField("photo_id", QVariant.Int))
-        center_fields.append(QgsField("lat", QVariant.Double))
-        center_fields.append(QgsField("lon", QVariant.Double))
-        center_fields.append(QgsField("altitude_m", QVariant.Double))
-        center_fields.append(QgsField("azimuth_deg", QVariant.Double))
-        center_fields.append(QgsField("gsd_cm", QVariant.Double))
-        center_fields.append(QgsField("camera", QVariant.String))
+        center_fields.append(QgsField("id", QVariant.Type.Int))
+        center_fields.append(QgsField("transect_id", QVariant.Type.Int))
+        center_fields.append(QgsField("photo_id", QVariant.Type.Int))
+        center_fields.append(QgsField("lat", QVariant.Type.Double))
+        center_fields.append(QgsField("lon", QVariant.Type.Double))
+        center_fields.append(QgsField("altitude_m", QVariant.Type.Double))
+        center_fields.append(QgsField("azimuth_deg", QVariant.Type.Double))
+        center_fields.append(QgsField("gsd_cm", QVariant.Type.Double))
+        center_fields.append(QgsField("camera", QVariant.Type.String))
 
         footprint_fields = QgsFields()
-        footprint_fields.append(QgsField("id", QVariant.Int))
-        footprint_fields.append(QgsField("transect_id", QVariant.Int))
-        footprint_fields.append(QgsField("photo_id", QVariant.Int))
-        footprint_fields.append(QgsField("altitude_m", QVariant.Double))
-        footprint_fields.append(QgsField("azimuth_deg", QVariant.Double))
-        footprint_fields.append(QgsField("area_m2", QVariant.Double))
-        footprint_fields.append(QgsField("gsd_cm", QVariant.Double))
-        footprint_fields.append(QgsField("camera", QVariant.String))
+        footprint_fields.append(QgsField("id", QVariant.Type.Int))
+        footprint_fields.append(QgsField("transect_id", QVariant.Type.Int))
+        footprint_fields.append(QgsField("photo_id", QVariant.Type.Int))
+        footprint_fields.append(QgsField("altitude_m", QVariant.Type.Double))
+        footprint_fields.append(QgsField("azimuth_deg", QVariant.Type.Double))
+        footprint_fields.append(QgsField("area_m2", QVariant.Type.Double))
+        footprint_fields.append(QgsField("gsd_cm", QVariant.Type.Double))
+        footprint_fields.append(QgsField("camera", QVariant.Type.String))
 
         centers_param_key = (
             self.OUTPUT_CENTERS
@@ -450,7 +450,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
                             spec.canonicalName,
                         ]
                     )
-                    centers_sink.addFeature(c_feat, QgsFeatureSink.FastInsert)
+                    centers_sink.addFeature(c_feat, QgsFeatureSink.Flag.FastInsert)
 
                     poly_pts = [
                         QgsPointXY(c_lon, c_lat)
@@ -477,7 +477,7 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
                             spec.canonicalName,
                         ]
                     )
-                    footprints_sink.addFeature(fp_feat, QgsFeatureSink.FastInsert)
+                    footprints_sink.addFeature(fp_feat, QgsFeatureSink.Flag.FastInsert)
 
                     global_photo_id += 1
 

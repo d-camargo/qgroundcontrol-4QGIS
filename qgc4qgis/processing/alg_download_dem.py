@@ -62,7 +62,7 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr("Polygon layer"),
-                [QgsProcessing.TypeVectorPolygon],
+                [QgsProcessing.SourceType.TypeVectorPolygon],
             )
         )
 
@@ -70,7 +70,7 @@ class DownloadDemAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MARGEM,
                 self.tr("Safety margin (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=250.0,
                 minValue=0.0,
             )

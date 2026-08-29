@@ -104,7 +104,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSource(
                 self.INPUT,
                 self.tr("Polygon layer"),
-                [QgsProcessing.TypeVectorPolygon],
+                [QgsProcessing.SourceType.TypeVectorPolygon],
             )
         )
 
@@ -121,7 +121,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
                 self.tr("Flight altitude (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=100.0,
                 minValue=0.0,
             )
@@ -131,7 +131,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.GSD,
                 self.tr("GSD (cm/px) - if > 0, overrides/calculates altitude"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -141,7 +141,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_SIDE,
                 self.tr("Side overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -152,7 +152,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OVERLAP_FRONTAL,
                 self.tr("Frontal overlap (%)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=70.0,
                 minValue=0.0,
                 maxValue=99.0,
@@ -163,7 +163,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLE,
                 self.tr("Grid angle (degrees)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=-180.0,
                 maxValue=180.0,
@@ -174,7 +174,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TURNAROUND,
                 self.tr("Turnaround distance (m)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.0,
                 minValue=0.0,
             )
@@ -201,7 +201,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_WIDTH,
                 self.tr("Manual camera: Sensor width (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.9,
                 minValue=0.0,
                 optional=True,
@@ -212,7 +212,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SENSOR_HEIGHT,
                 self.tr("Manual camera: Sensor height (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=24.0,
                 minValue=0.0,
                 optional=True,
@@ -223,7 +223,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_WIDTH,
                 self.tr("Manual camera: Image width (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=7952,
                 minValue=0,
                 optional=True,
@@ -234,7 +234,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IMAGE_HEIGHT,
                 self.tr("Manual camera: Image height (px)"),
-                QgsProcessingParameterNumber.Integer,
+                QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=5304,
                 minValue=0,
                 optional=True,
@@ -245,7 +245,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.FOCAL_LENGTH,
                 self.tr("Manual camera: Focal length (mm)"),
-                QgsProcessingParameterNumber.Double,
+                QgsProcessingParameterNumber.Type.Double,
                 defaultValue=35.0,
                 minValue=0.0,
                 optional=True,
@@ -256,7 +256,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
                 self.tr("Flight grid (Lines)"),
-                QgsProcessing.TypeVectorLine,
+                QgsProcessing.SourceType.TypeVectorLine,
             )
         )
 
@@ -311,16 +311,16 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         fields = QgsFields()
-        fields.append(QgsField("id", QVariant.Int))
-        fields.append(QgsField("length_m", QVariant.Double))
-        fields.append(QgsField("altitude_m", QVariant.Double))
-        fields.append(QgsField("gsd_cm", QVariant.Double))
-        fields.append(QgsField("side_overlap", QVariant.Double))
-        fields.append(QgsField("frontal_overlap", QVariant.Double))
-        fields.append(QgsField("trigger_dist_m", QVariant.Double))
-        fields.append(QgsField("spacing_m", QVariant.Double))
-        fields.append(QgsField("camera", QVariant.String))
-        fields.append(QgsField("photo_count", QVariant.Int))
+        fields.append(QgsField("id", QVariant.Type.Int))
+        fields.append(QgsField("length_m", QVariant.Type.Double))
+        fields.append(QgsField("altitude_m", QVariant.Type.Double))
+        fields.append(QgsField("gsd_cm", QVariant.Type.Double))
+        fields.append(QgsField("side_overlap", QVariant.Type.Double))
+        fields.append(QgsField("frontal_overlap", QVariant.Type.Double))
+        fields.append(QgsField("trigger_dist_m", QVariant.Type.Double))
+        fields.append(QgsField("spacing_m", QVariant.Type.Double))
+        fields.append(QgsField("camera", QVariant.Type.String))
+        fields.append(QgsField("photo_count", QVariant.Type.Int))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters,
@@ -412,7 +412,7 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
                             photo_count,
                         ]
                     )
-                    sink.addFeature(out_feat, QgsFeatureSink.FastInsert)
+                    sink.addFeature(out_feat, QgsFeatureSink.Flag.FastInsert)
                     transect_id += 1
 
             step += 1

@@ -7,7 +7,7 @@ atingem o plugin:
 - **B110/B112**: ``ExceptHandler`` cujo corpo é um único ``pass``/``continue``
   *e* cujo tipo é ausente ou genérico (``Exception``/``BaseException``).
   Handler tipado com corpo mudo PASSA (``check_typed_exception=False``).
-- **B405**: ``import`` cujo nome é ``xml`` ou começa com ``xml.etree``.
+- **B405**: ``import`` cujo nome é ``xml`` ou começa com ``xml.``.
 
 Varre apenas os ``.py`` de ``qgc4qgis/`` — o que entra no ZIP do plugin;
 ``tests/`` não é escaneado pelo portão real e pode importar ``xml.etree``
@@ -48,7 +48,7 @@ def _scan(codigo: str) -> list[str]:
             nomes = (
                 [a.name for a in no.names] if isinstance(no, ast.Import) else [no.module or ""]
             )
-            if any(n.startswith("xml.etree") or n == "xml" for n in nomes):
+            if any(n.startswith("xml.") or n == "xml" for n in nomes):
                 trecho = linhas[no.lineno - 1].strip() if 0 < no.lineno <= len(linhas) else ""
                 achados.append(f"{no.lineno}: B405 xml.etree — {trecho[:110]}")
     return achados
@@ -80,10 +80,13 @@ def test_semantica_do_scanner():
     assert _scan("for i in x:\n    try:\n        f()\n    except:\n        continue\n") == [
         "4: B112 try/except/continue — except:"
     ]
-    # B405: import xml.etree (direto e from).
+    # B405: import xml.etree (direto e from), dom, etc.
     assert _scan("import xml.etree.ElementTree as ET\n") == [
         "1: B405 xml.etree — import xml.etree.ElementTree as ET"
     ]
     assert _scan("from xml.etree import ElementTree\n") == [
         "1: B405 xml.etree — from xml.etree import ElementTree"
+    ]
+    assert _scan("from xml.dom import minidom\n") == [
+        "1: B405 xml.etree — from xml.dom import minidom"
     ]
