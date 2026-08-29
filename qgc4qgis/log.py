@@ -4,14 +4,8 @@ from qgis.core import Qgis, QgsMessageLog
 
 TAG = "QGC4QGIS"
 
-# Qgis.MessageLevel.Warning (QGIS 3.24+/4.x) com fallback para Qgis.Warning
-# (QGIS antigo) — mesmo padrão do dock.py para QFrame.Shape.NoFrame.
-try:
-    _WARNING = Qgis.MessageLevel.Warning
-    _CRITICAL = Qgis.MessageLevel.Critical
-except AttributeError:
-    _WARNING = Qgis.Warning
-    _CRITICAL = Qgis.Critical
+_WARNING = Qgis.MessageLevel.Warning
+_CRITICAL = Qgis.MessageLevel.Critical
 
 
 def log_warning(msg: str) -> None:

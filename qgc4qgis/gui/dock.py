@@ -43,10 +43,7 @@ from qgc4qgis.core.stats import calculate_flight_stats, calculate_polygon_area
 from qgc4qgis.gui.preview import FlightPreviewManager
 from qgc4qgis.log import log_error, log_warning
 
-try:
-    NO_FRAME = QFrame.Shape.NoFrame  # Qt6 (PyQt6)
-except AttributeError:
-    NO_FRAME = QFrame.NoFrame  # Qt5 (PyQt5)
+NO_FRAME = QFrame.Shape.NoFrame
 
 
 class QgcPlanningDockWidget(QgsDockWidget):
@@ -87,7 +84,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         lay_layer = QFormLayout(grp_layer)
 
         self.cmb_layer = QgsMapLayerComboBox(grp_layer)
-        self.cmb_layer.setFilters(QgsMapLayerProxyModel.PolygonLayer)
+        self.cmb_layer.setFilters(QgsMapLayerProxyModel.Filter.PolygonLayer)
         self.cmb_layer.layerChanged.connect(self._on_layer_changed)
         lay_layer.addRow(self.tr("Layer:"), self.cmb_layer)
 
@@ -245,7 +242,7 @@ class QgcPlanningDockWidget(QgsDockWidget):
         lay_terrain = QFormLayout(grp_terrain)
 
         self.cmb_elevation_layer = QgsMapLayerComboBox(grp_terrain)
-        self.cmb_elevation_layer.setFilters(QgsMapLayerProxyModel.RasterLayer)
+        self.cmb_elevation_layer.setFilters(QgsMapLayerProxyModel.Filter.RasterLayer)
         self.cmb_elevation_layer.setAllowEmptyLayer(True)
         self.cmb_elevation_layer.layerChanged.connect(self._on_grid_param_changed)
         lay_terrain.addRow(self.tr("Elevation layer:"), self.cmb_elevation_layer)

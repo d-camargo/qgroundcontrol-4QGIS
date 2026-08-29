@@ -1,13 +1,15 @@
-"""Réplica local do portão de segurança (passo 117, decisão D61).
+"""Réplica local do portão de segurança (passo 117, decisão D61; B101 no 123).
 
 Mesma semântica do `_scan_seguranca` do planexec.py — o scanner da família
-Bandit que o plugins.qgis.org roda no upload — restrito às duas regras que
+Bandit que o plugins.qgis.org roda no upload — restrita às três regras que
 atingem o plugin:
 
+- **B101**: qualquer ``assert`` (o ZIP de produção roda com ``-O`` no QGIS;
+  guard de contrato vira código morto e some em silêncio).
 - **B110/B112**: ``ExceptHandler`` cujo corpo é um único ``pass``/``continue``
   *e* cujo tipo é ausente ou genérico (``Exception``/``BaseException``).
   Handler tipado com corpo mudo PASSA (``check_typed_exception=False``).
-- **B405**: ``import`` cujo nome é ``xml`` ou começa com ``xml.``.
+- **B405**: ``import`` cujo nome é ``xml`` ou começa com ``xml.etree``.
 
 Varre apenas os ``.py`` de ``qgc4qgis/`` — o que entra no ZIP do plugin;
 ``tests/`` não é escaneado pelo portão real e pode importar ``xml.etree``
@@ -30,7 +32,10 @@ def _scan(codigo: str) -> list[str]:
     achados: list[str] = []
     linhas = codigo.splitlines()
     for no in ast.walk(ast.parse(codigo)):
-        if isinstance(no, ast.ExceptHandler):
+        if isinstance(no, ast.Assert):
+            trecho = linhas[no.lineno - 1].strip() if 0 < no.lineno <= len(linhas) else ""
+            achados.append(f"{no.lineno}: B101 assert — {trecho[:110]}")
+        elif isinstance(no, ast.ExceptHandler):
             if (
                 len(no.body) == 1
                 and isinstance(no.body[0], _MUDOS)
@@ -48,7 +53,7 @@ def _scan(codigo: str) -> list[str]:
             nomes = (
                 [a.name for a in no.names] if isinstance(no, ast.Import) else [no.module or ""]
             )
-            if any(n.startswith("xml.") or n == "xml" for n in nomes):
+            if any(n.startswith("xml.etree") or n == "xml" for n in nomes):
                 trecho = linhas[no.lineno - 1].strip() if 0 < no.lineno <= len(linhas) else ""
                 achados.append(f"{no.lineno}: B405 xml.etree — {trecho[:110]}")
     return achados
@@ -80,13 +85,14 @@ def test_semantica_do_scanner():
     assert _scan("for i in x:\n    try:\n        f()\n    except:\n        continue\n") == [
         "4: B112 try/except/continue — except:"
     ]
-    # B405: import xml.etree (direto e from), dom, etc.
+    # B405: import xml.etree (direto e from).
     assert _scan("import xml.etree.ElementTree as ET\n") == [
         "1: B405 xml.etree — import xml.etree.ElementTree as ET"
     ]
     assert _scan("from xml.etree import ElementTree\n") == [
         "1: B405 xml.etree — from xml.etree import ElementTree"
     ]
-    assert _scan("from xml.dom import minidom\n") == [
-        "1: B405 xml.etree — from xml.dom import minidom"
+    # B101: qualquer assert acusa, com o trecho da linha.
+    assert _scan("def f(x):\n    assert x is not None\n") == [
+        "2: B101 assert — assert x is not None"
     ]

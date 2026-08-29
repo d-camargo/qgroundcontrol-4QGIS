@@ -19,7 +19,7 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterNumber,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.PyQt.QtCore import QCoreApplication, QMetaType, QT_VERSION, QVariant
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
@@ -27,6 +27,15 @@ from qgc4qgis.core.geo import AEQDProjection
 from qgc4qgis.core.route import sample_photo_centers
 from qgc4qgis.core.survey import generate_survey_transects
 from qgc4qgis.processing.alg_survey_grid import extract_polygons
+
+if QT_VERSION >= 0x060000:
+    FIELD_INT = QMetaType.Type.Int
+    FIELD_DOUBLE = QMetaType.Type.Double
+    FIELD_STRING = QMetaType.Type.QString
+else:
+    FIELD_INT = QVariant.Type.Int
+    FIELD_DOUBLE = QVariant.Type.Double
+    FIELD_STRING = QVariant.Type.String
 
 
 def extract_lines(geom: QgsGeometry) -> list[list[tuple[float, float]]]:
@@ -320,25 +329,25 @@ class PhotoCentersAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         center_fields = QgsFields()
-        center_fields.append(QgsField("id", QVariant.Type.Int))
-        center_fields.append(QgsField("transect_id", QVariant.Type.Int))
-        center_fields.append(QgsField("photo_id", QVariant.Type.Int))
-        center_fields.append(QgsField("lat", QVariant.Type.Double))
-        center_fields.append(QgsField("lon", QVariant.Type.Double))
-        center_fields.append(QgsField("altitude_m", QVariant.Type.Double))
-        center_fields.append(QgsField("azimuth_deg", QVariant.Type.Double))
-        center_fields.append(QgsField("gsd_cm", QVariant.Type.Double))
-        center_fields.append(QgsField("camera", QVariant.Type.String))
+        center_fields.append(QgsField("id", FIELD_INT))
+        center_fields.append(QgsField("transect_id", FIELD_INT))
+        center_fields.append(QgsField("photo_id", FIELD_INT))
+        center_fields.append(QgsField("lat", FIELD_DOUBLE))
+        center_fields.append(QgsField("lon", FIELD_DOUBLE))
+        center_fields.append(QgsField("altitude_m", FIELD_DOUBLE))
+        center_fields.append(QgsField("azimuth_deg", FIELD_DOUBLE))
+        center_fields.append(QgsField("gsd_cm", FIELD_DOUBLE))
+        center_fields.append(QgsField("camera", FIELD_STRING))
 
         footprint_fields = QgsFields()
-        footprint_fields.append(QgsField("id", QVariant.Type.Int))
-        footprint_fields.append(QgsField("transect_id", QVariant.Type.Int))
-        footprint_fields.append(QgsField("photo_id", QVariant.Type.Int))
-        footprint_fields.append(QgsField("altitude_m", QVariant.Type.Double))
-        footprint_fields.append(QgsField("azimuth_deg", QVariant.Type.Double))
-        footprint_fields.append(QgsField("area_m2", QVariant.Type.Double))
-        footprint_fields.append(QgsField("gsd_cm", QVariant.Type.Double))
-        footprint_fields.append(QgsField("camera", QVariant.Type.String))
+        footprint_fields.append(QgsField("id", FIELD_INT))
+        footprint_fields.append(QgsField("transect_id", FIELD_INT))
+        footprint_fields.append(QgsField("photo_id", FIELD_INT))
+        footprint_fields.append(QgsField("altitude_m", FIELD_DOUBLE))
+        footprint_fields.append(QgsField("azimuth_deg", FIELD_DOUBLE))
+        footprint_fields.append(QgsField("area_m2", FIELD_DOUBLE))
+        footprint_fields.append(QgsField("gsd_cm", FIELD_DOUBLE))
+        footprint_fields.append(QgsField("camera", FIELD_STRING))
 
         centers_param_key = (
             self.OUTPUT_CENTERS

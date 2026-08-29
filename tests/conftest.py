@@ -22,12 +22,13 @@ if PLUGIN_DIR not in sys.path:
 
 @pytest.fixture(scope="session", autouse=True)
 def qgis_app():
-    """Initialize QgsApplication in headless mode for test suite execution."""
-    from qgis.core import QgsApplication
+    """Initialize QgsApplication in headless mode for test suite execution.
 
-    app = QgsApplication([], False)
-    app.initQgis()
+    ``qgis.testing.start_app`` (mesmo utilitário do smoke do gate) registra o
+    ``exitQgis`` via ``atexit``: chamá-lo aqui na finalização da fixture aborta
+    (Qt6) ou segfaulta (Qt5) ANTES de o pytest imprimir o resumo da suíte.
+    """
+    from qgis.testing import start_app
 
+    app = start_app()
     yield app
-
-    app.exitQgis()

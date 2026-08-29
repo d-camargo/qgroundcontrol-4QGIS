@@ -26,9 +26,8 @@ def gsd_from_altitude(altitude: float, spec: "CameraSpec | None") -> float:
     Formula: (altitude_m * 100.0 * sensorWidth_mm) / (imageWidth_px * focalLength_mm)
     Input guard: returns 0.0 if altitude <= 0 or spec is invalid.
     """
-    if altitude <= 0 or not is_valid_camera_spec(spec):
+    if spec is None or altitude <= 0 or not is_valid_camera_spec(spec):
         return 0.0
-    assert spec is not None
     return (altitude * 100.0 * spec.sensorWidth) / (spec.imageWidth * spec.focalLength)
 
 
@@ -38,9 +37,8 @@ def altitude_from_gsd(gsd: float, spec: "CameraSpec | None") -> float:
     Formula: (imageWidth_px * gsd_cm_px * focalLength_mm) / (sensorWidth_mm * 100.0)
     Input guard: returns 0.0 if gsd <= 0 or spec is invalid.
     """
-    if gsd <= 0 or not is_valid_camera_spec(spec):
+    if spec is None or gsd <= 0 or not is_valid_camera_spec(spec):
         return 0.0
-    assert spec is not None
     return (spec.imageWidth * gsd * spec.focalLength) / (spec.sensorWidth * 100.0)
 
 
@@ -56,9 +54,8 @@ def image_footprints(spec: "CameraSpec | None", gsd: float) -> tuple[float, floa
 
     Input guard: returns (0.0, 0.0) if gsd <= 0 or spec is invalid.
     """
-    if gsd <= 0 or not is_valid_camera_spec(spec):
+    if spec is None or gsd <= 0 or not is_valid_camera_spec(spec):
         return (0.0, 0.0)
-    assert spec is not None
 
     if spec.landscape:
         side = (spec.imageWidth * gsd) / 100.0

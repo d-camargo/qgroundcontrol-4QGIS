@@ -21,12 +21,21 @@ from qgis.core import (
     QgsProcessingParameterFeatureSource,
     QgsProcessingParameterNumber,
 )
-from qgis.PyQt.QtCore import QCoreApplication, QVariant
+from qgis.PyQt.QtCore import QCoreApplication, QMetaType, QT_VERSION, QVariant
 
 from qgc4qgis.core.cameracalc import CameraCalc
 from qgc4qgis.core.cameras import CUSTOM_CAMERA_NAME, CameraSpec, load_cameras
 from qgc4qgis.core.geo import AEQDProjection, geodesic_distance
 from qgc4qgis.core.survey import generate_survey_transects
+
+if QT_VERSION >= 0x060000:
+    FIELD_INT = QMetaType.Type.Int
+    FIELD_DOUBLE = QMetaType.Type.Double
+    FIELD_STRING = QMetaType.Type.QString
+else:
+    FIELD_INT = QVariant.Type.Int
+    FIELD_DOUBLE = QVariant.Type.Double
+    FIELD_STRING = QVariant.Type.String
 
 
 def extract_polygons(geom: QgsGeometry) -> list[list[tuple[float, float]]]:
@@ -311,16 +320,16 @@ class SurveyGridAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(self.tr("Failed to calculate camera/flight parameters."))
 
         fields = QgsFields()
-        fields.append(QgsField("id", QVariant.Type.Int))
-        fields.append(QgsField("length_m", QVariant.Type.Double))
-        fields.append(QgsField("altitude_m", QVariant.Type.Double))
-        fields.append(QgsField("gsd_cm", QVariant.Type.Double))
-        fields.append(QgsField("side_overlap", QVariant.Type.Double))
-        fields.append(QgsField("frontal_overlap", QVariant.Type.Double))
-        fields.append(QgsField("trigger_dist_m", QVariant.Type.Double))
-        fields.append(QgsField("spacing_m", QVariant.Type.Double))
-        fields.append(QgsField("camera", QVariant.Type.String))
-        fields.append(QgsField("photo_count", QVariant.Type.Int))
+        fields.append(QgsField("id", FIELD_INT))
+        fields.append(QgsField("length_m", FIELD_DOUBLE))
+        fields.append(QgsField("altitude_m", FIELD_DOUBLE))
+        fields.append(QgsField("gsd_cm", FIELD_DOUBLE))
+        fields.append(QgsField("side_overlap", FIELD_DOUBLE))
+        fields.append(QgsField("frontal_overlap", FIELD_DOUBLE))
+        fields.append(QgsField("trigger_dist_m", FIELD_DOUBLE))
+        fields.append(QgsField("spacing_m", FIELD_DOUBLE))
+        fields.append(QgsField("camera", FIELD_STRING))
+        fields.append(QgsField("photo_count", FIELD_INT))
 
         (sink, dest_id) = self.parameterAsSink(
             parameters,

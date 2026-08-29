@@ -16,7 +16,7 @@ category=Plugins
 experimental=False
 supportsQt6=True
 hasProcessingProvider=yes
-changelog=0.7.1: Full compatibility with Qt6 and QGIS 4.x across all processing algorithms; static regression guard for Qt6 enums.
+changelog=0.7.1: Full compatibility with Qt6 and QGIS 4.x — all Qt/QGIS enums scoped, fixing the 106 findings of the plugins.qgis.org Qt6 check on 0.7.0; field types built per Qt version (QVariant.Type on Qt5, QMetaType.Type on Qt6); production asserts replaced by input guards; static regression guard for Qt6 enums.
     0.7.0: Source strings in English with a Brazilian Portuguese translation (i18n/qgc4qgis_pt_BR.qm) — the interface stays in Portuguese for pt-BR locales. The custom camera entry is now "Custom camera (manual)": a saved camera setting with the old name falls back to the first camera in the list.
     0.6.3: Export, survey grid generation, and DEM download failures are now logged to the QGIS log instead of being silenced; XML generation (.kml/.kmz) without the standard library XML parser. No change to the exported files.
     0.6.2: DEM writing no longer loads the GDAL NumPy bindings (osgeo.gdal_array) — eliminates the "module compiled using NumPy 1.x" warning in the log during DEM download.

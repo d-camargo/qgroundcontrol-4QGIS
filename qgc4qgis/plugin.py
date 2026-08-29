@@ -14,10 +14,7 @@ from qgc4qgis.processing.provider import Qgc4QgisProvider
 if TYPE_CHECKING:
     from qgc4qgis.gui.dock import QgcPlanningDockWidget
 
-try:
-    RIGHT_DOCK_WIDGET_AREA = Qt.DockWidgetArea.RightDockWidgetArea  # Qt6 (PyQt6)
-except AttributeError:
-    RIGHT_DOCK_WIDGET_AREA = Qt.RightDockWidgetArea  # Qt5 (PyQt5)
+RIGHT_DOCK_WIDGET_AREA = Qt.DockWidgetArea.RightDockWidgetArea
 
 
 _TRANSLATORS: list[QTranslator] = []
