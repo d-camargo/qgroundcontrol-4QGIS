@@ -1,6 +1,8 @@
 """Tests for Copernicus DEM elevation provider core logic in qgc4qgis.core.elevation."""
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -223,4 +225,43 @@ def test_elevation_module_does_not_import_osgeo_on_load():
     pattern = re.compile(r"^(from osgeo|import osgeo|import gdal|gdal\.UseExceptions)")
     for line in source_code.splitlines():
         assert not pattern.search(line)
+
+    assert not re.search(r"\b(gdal|osr)\.UseExceptions\s*\(", source_code)
+    assert "ExceptionMgr" not in source_code
+
+
+def test_build_dem_geotiff_does_not_import_gdal_array(tmp_path):
+    """Verify build_dem_geotiff does not import osgeo.gdal_array or numpy in subprocess."""
+    repo_root = str(Path(__file__).resolve().parents[1])
+    geotiff_path = str(tmp_path / "dem_test.tif")
+    script = f"""import sys
+sys.path.insert(0, {repo_root!r})
+from qgc4qgis.core.elevation import CarpetTile, build_dem_geotiff
+
+tile = CarpetTile(0.0, 0.0, 0.01, 0.01, [[1.0, 2.0], [3.0, 4.0]])
+build_dem_geotiff([tile], {geotiff_path!r})
+
+print("osgeo.gdal_array" in sys.modules)
+print("numpy" in sys.modules)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert Path(geotiff_path).exists(), (
+        f"GeoTIFF file missing. stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+    lines = [line.strip() for line in result.stdout.strip().splitlines() if line.strip()]
+    assert len(lines) >= 2, (
+        f"Expected at least 2 lines of output. stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+    assert lines[0] == "False", (
+        f"osgeo.gdal_array was imported! stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+    assert lines[1] == "False", (
+        f"numpy was imported! stdout={result.stdout!r}, stderr={result.stderr!r}"
+    )
+
 

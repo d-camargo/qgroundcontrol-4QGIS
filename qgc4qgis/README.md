@@ -248,11 +248,13 @@ Conforme os termos de uso do provedor, a utilização dos dados do Copernicus DE
 
 ### 7. Compatibilidade com NumPy
 
-O download do DEM **não requer NumPy**, operando diretamente via Python e bindings nativos da GDAL. Com isso, a funcionalidade opera sem conflitos em ambientes com NumPy 2.x (como os QGIS 4 recentes), mesmo quando os bindings GDAL do ambiente foram compilados com NumPy 1.x. Desde a versão 0.6.1, o plugin também não importa os bindings GDAL ao ser carregado (import tardio, só no momento de gravar o DEM).
+O download do DEM **não requer NumPy**, operando diretamente via Python e bindings nativos da GDAL. Desde a versão 0.6.1, o plugin não importa os bindings GDAL ao ser carregado (import tardio, apenas no momento de gravar o DEM). A partir da versão 0.6.2, o plugin também não habilita as exceções da GDAL pela via que importa `osgeo.gdal_array` (binário linkado ao NumPy). Desta forma, **nenhum caminho do plugin (carregamento ou download do DEM) carrega NumPy**, garantindo a operação sem conflitos em ambientes com NumPy 2.x (como o QGIS 4), mesmo quando os bindings GDAL do ambiente foram compilados com NumPy 1.x.
 
 ### 8. Problemas Conhecidos
 
+- **Aviso "A module that was compiled using NumPy 1.x…" no log durante o download do DEM**:
+  Se o traceback *"A module that was compiled using NumPy 1.x..."* aparecer no **log** do QGIS como `WARNING` **enquanto o DEM baixa e carrega normalmente**, trata-se de uma extensão C compilada contra NumPy 1.x sendo importada por outro componente do ambiente e imprimindo o aviso — a operação não falha.
 - **Diálogo "A module that was compiled using NumPy 1.x…" ao instalar**:
-  Se o diálogo *"A module that was compiled using NumPy 1.x..."* aparecer **ao instalar** qualquer versão $\ge$ 0.6, a origem é outro componente do Python do QGIS — típico do QGIS em Flatpak com `numpy` 2.x instalado via `pip` em `/var/data/python/...`, que sombreia o `numpy` do runtime e quebra extensões compiladas contra o `numpy` antigo.
-  - **Correção de ambiente**: Remover esse `numpy` instalado via `pip` (o runtime volta a usar o `numpy` casado com seus binários), sem necessidade de fazer downgrade do NumPy.
+  Se o diálogo *"A module that was compiled using NumPy 1.x..."* aparecer **ao instalar** o complemento, a origem é outro componente do Python do QGIS — típico do QGIS em Flatpak com `numpy` 2.x instalado via `pip` em `/var/data/python/...`, que sombreia o `numpy` do runtime e quebra extensões compiladas contra o `numpy` antigo.
+  - **Correção de ambiente**: Remover esse `numpy` instalado via `pip` em `/var/data/python/...` no Flatpak (o runtime volta a usar o `numpy` casado com seus binários), em vez de fazer downgrade do NumPy.
   - **Repositório oficial**: A instalação pelo repositório oficial exige que a versão nova esteja previamente publicada lá.

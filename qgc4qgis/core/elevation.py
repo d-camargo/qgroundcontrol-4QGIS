@@ -5,7 +5,8 @@ for the Copernicus DEM elevation service hosted at terrain-ce.suite.auterion.com
 
 GDAL e OSR (osgeo) são importados tardiamente, dentro das funções de escrita,
 para o carregamento do plugin não depender dos bindings GDAL (frágeis em ambientes
-com NumPy 2.x sombreado).
+com NumPy 2.x sombreado). As exceções GDAL/OSR são habilitadas por módulo via
+_enable_gdal_exceptions() para evitar a importação de osgeo.gdal_array.
 """
 
 import json
@@ -198,6 +199,23 @@ def parse_carpet(payload: dict) -> CarpetTile:
     )
 
 
+def _enable_gdal_exceptions() -> None:
+    """Enable GDAL and OSR exceptions per module without importing osgeo.gdal_array.
+
+    In GDAL >= 3.7, the public UseExceptions() method propagates state by importing
+    osgeo.gdal_array, a C-extension binary linked to NumPy that breaks in environments
+    with NumPy 2.x. Enabling exceptions per module avoids loading osgeo.gdal_array
+    while ensuring exceptions are enabled for GDAL and OSR.
+    """
+    from osgeo import gdal, osr
+
+    for module in (gdal, osr):
+        enable = getattr(module, "_UseExceptions", None)
+        if enable is None:
+            enable = module.UseExceptions
+        enable()
+
+
 def carpet_to_dataset(tile: CarpetTile) -> "gdal.Dataset":
     """Create an in-memory GDAL Dataset (driver MEM) from a CarpetTile.
 
@@ -209,7 +227,7 @@ def carpet_to_dataset(tile: CarpetTile) -> "gdal.Dataset":
     """
     from osgeo import gdal, osr
 
-    gdal.UseExceptions()
+    _enable_gdal_exceptions()
     driver = gdal.GetDriverByName("MEM")
     ds = driver.Create("", tile.n_cols, tile.n_rows, 1, gdal.GDT_Float32)
 
@@ -246,7 +264,7 @@ def build_dem_geotiff(tiles: Sequence[CarpetTile], out_path: str) -> str:
     """
     from osgeo import gdal
 
-    gdal.UseExceptions()
+    _enable_gdal_exceptions()
     if not tiles:
         raise ValueError("Tiles sequence cannot be empty")
 
