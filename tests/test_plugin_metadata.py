@@ -51,10 +51,14 @@ def test_plugin_metadata_file():
     assert re.match(r"^\d+\.\d+\.\d+$", general["version"])
     assert general["qgisMinimumVersion"] == "3.34"
     assert general["qgisMaximumVersion"] == "4.99"
+    assert general["supportsQt6"] == "True"
     assert general["hasProcessingProvider"] == "yes"
 
     icon_path = plugin_dir / general["icon"]
     assert icon_path.exists(), f"Icon file not found at {icon_path}"
+
+    license_path = plugin_dir / "LICENSE"
+    assert license_path.exists(), f"LICENSE file not found at {license_path}"
 
 
 def test_plugin_version_matches_metadata():
