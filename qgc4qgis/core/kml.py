@@ -3,9 +3,9 @@
 Targeted for classic Litchi Mission Hub (flylitchi.com/hub) where the importer is togeojson.
 """
 
-import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from qgc4qgis.core import xmlwrite as ET
 from qgc4qgis.core.i18n import tr
 from qgc4qgis.core.route import Route
 

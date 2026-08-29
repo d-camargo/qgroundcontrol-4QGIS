@@ -5,7 +5,7 @@ import os
 from typing import TYPE_CHECKING
 
 from qgis.core import QgsApplication
-from qgis.PyQt.QtCore import QCoreApplication, Qt
+from qgis.PyQt.QtCore import QCoreApplication, QLocale, Qt, QTranslator
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
@@ -18,6 +18,23 @@ try:
     RIGHT_DOCK_WIDGET_AREA = Qt.DockWidgetArea.RightDockWidgetArea  # Qt6 (PyQt6)
 except AttributeError:
     RIGHT_DOCK_WIDGET_AREA = Qt.RightDockWidgetArea  # Qt5 (PyQt5)
+
+
+_TRANSLATORS: list[QTranslator] = []
+
+
+def _load_translations() -> None:
+    """Install the Qt translator for the current locale when one is shipped."""
+    locale = QLocale.system().name()
+    i18n_dir = os.path.join(os.path.dirname(__file__), "i18n")
+    for candidate in (locale, locale[:2]):
+        qm_path = os.path.join(i18n_dir, f"qgc4qgis_{candidate}.qm")
+        if os.path.exists(qm_path):
+            translator = QTranslator()
+            if translator.load(qm_path):
+                QCoreApplication.installTranslator(translator)
+                _TRANSLATORS.append(translator)
+            break
 
 
 def _metadata_version() -> str:
@@ -42,6 +59,7 @@ class Qgc4QgisPlugin:
         :param iface: An interface instance that will be passed to this class
             which gives the plugin access to the QGIS GUI.
         """
+        _load_translations()
         self.iface = iface
         self.action: QAction | None = None
         self.provider: Qgc4QgisProvider | None = None

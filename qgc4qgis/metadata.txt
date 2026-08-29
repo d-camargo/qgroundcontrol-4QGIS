@@ -17,6 +17,7 @@ experimental=False
 supportsQt6=True
 hasProcessingProvider=yes
 changelog=0.7.0: Source strings in English with a Brazilian Portuguese translation (i18n/qgc4qgis_pt_BR.qm) — the interface stays in Portuguese for pt-BR locales. The custom camera entry is now "Custom camera (manual)": a saved camera setting with the old name falls back to the first camera in the list.
+    0.6.3: Export, survey grid generation, and DEM download failures are now logged to the QGIS log instead of being silenced; XML generation (.kml/.kmz) without the standard library XML parser. No change to the exported files.
     0.6.2: DEM writing no longer loads the GDAL NumPy bindings (osgeo.gdal_array) — eliminates the "module compiled using NumPy 1.x" warning in the log during DEM download.
     0.6.1: Plugin loading no longer imports the GDAL bindings (lazy import at DEM writing time) — installation is immune to environments with NumPy 2.x where gdal_array was compiled against NumPy 1.x; NumPy install dialog diagnosis added to the README.
     0.6.0: Declared compatibility with QGIS 4.x (qgisMaximumVersion=4.99); DEM download no longer depends on NumPy — fixes the "module compiled using NumPy 1.x" error in QGIS 4 environments with NumPy 2.x.

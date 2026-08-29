@@ -390,3 +390,160 @@ def test_dock_download_dem_button_and_without_layer(qgis_app, monkeypatch):
 
     dock.download_dem()
     assert warning_called
+
+
+def test_dock_exporters_headless_import_error_logs_warning(qgis_app, tmp_path, monkeypatch):
+    """Test that dock exporters log warning when processing module is missing in headless environment (Step 114)."""
+    import sys
+
+    from qgis.core import QgsProject
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(layer)
+
+    logged_warnings = []
+
+    def mock_log_warning(msg, tag="QGC4QGIS"):
+        logged_warnings.append(msg)
+
+    monkeypatch.setattr("qgc4qgis.gui.dock.log_warning", mock_log_warning)
+    monkeypatch.setitem(sys.modules, "processing", None)
+
+    res1 = dock.export_plan(str(tmp_path / "test.plan"))
+    res2 = dock.export_litchi(str(tmp_path / "test.csv"))
+    res3 = dock.export_kml(str(tmp_path / "test.kml"))
+    res4 = dock.export_dji(str(tmp_path / "test.kmz"))
+
+    assert res1 == str(tmp_path / "test.plan")
+    assert res2 == str(tmp_path / "test.csv")
+    assert res3 == str(tmp_path / "test.kml")
+    assert res4 == str(tmp_path / "test.kmz")
+
+    assert len(logged_warnings) == 4
+    assert "exportar_plano_qgc" in logged_warnings[0]
+    assert "exportar_litchi_csv" in logged_warnings[1]
+    assert "exportar_litchi_kml" in logged_warnings[2]
+    assert "exportar_dji_kmz" in logged_warnings[3]
+
+    QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_exporters_logging_on_processing_exception(qgis_app, tmp_path, monkeypatch):
+    """Test that dock exporters log errors via log_error when processing.run raises Exception (Step 114)."""
+    import sys
+    import types
+
+    from qgis.core import QgsProject
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(layer)
+
+    logged_errors = []
+
+    def mock_log_error(msg, tag="QGC4QGIS"):
+        logged_errors.append(msg)
+
+    monkeypatch.setattr("qgc4qgis.gui.dock.log_error", mock_log_error)
+
+    # Create dummy module for processing
+    fake_proc = types.ModuleType("processing")
+
+    def mock_run(*args, **kwargs):
+        raise RuntimeError("Test processing failure")
+
+    fake_proc.run = mock_run
+
+    monkeypatch.setitem(sys.modules, "processing", fake_proc)
+
+    dock.export_plan(str(tmp_path / "test.plan"))
+    dock.export_litchi(str(tmp_path / "test.csv"))
+    dock.export_kml(str(tmp_path / "test.kml"))
+    dock.export_dji(str(tmp_path / "test.kmz"))
+
+    assert len(logged_errors) == 4
+    assert "exportar_plano_qgc" in logged_errors[0]
+    assert "exportar_litchi_csv" in logged_errors[1]
+    assert "exportar_litchi_kml" in logged_errors[2]
+    assert "exportar_dji_kmz" in logged_errors[3]
+
+    QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_remaining_methods_headless_import_error_logs_warning(qgis_app, monkeypatch):
+    """Test that generate_grid, add_layers_to_project, and download_dem log warnings on missing processing module (Step 115)."""
+    import sys
+
+    from qgis.core import QgsProject
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(layer)
+
+    logged_warnings = []
+
+    def mock_log_warning(msg, tag="QGC4QGIS"):
+        logged_warnings.append(msg)
+
+    monkeypatch.setattr("qgc4qgis.gui.dock.log_warning", mock_log_warning)
+    monkeypatch.setitem(sys.modules, "processing", None)
+
+    dock.generate_grid()
+    dock.add_layers_to_project()
+    dock.download_dem()
+
+    assert len(logged_warnings) == 3
+    assert "gerar_grade_voo" in logged_warnings[0]
+    assert "gerar_grade_voo" in logged_warnings[1]
+    assert "baixar_dem_copernicus" in logged_warnings[2]
+
+    QgsProject.instance().removeMapLayer(layer)
+
+
+def test_dock_remaining_methods_logging_on_processing_exception(qgis_app, monkeypatch):
+    """Test that generate_grid, add_layers_to_project, and download_dem log errors via log_error on processing failure (Step 115)."""
+    import sys
+    import types
+
+    from qgis.core import QgsProject
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    dock = QgcPlanningDockWidget()
+    dock.cmb_layer.setLayer(layer)
+
+    logged_errors = []
+
+    def mock_log_error(msg, tag="QGC4QGIS"):
+        logged_errors.append(msg)
+
+    monkeypatch.setattr("qgc4qgis.gui.dock.log_error", mock_log_error)
+
+    fake_proc = types.ModuleType("processing")
+
+    def mock_run(*args, **kwargs):
+        raise RuntimeError("Test processing failure")
+
+    fake_proc.run = mock_run
+    fake_proc.runAndLoadResults = mock_run
+
+    monkeypatch.setitem(sys.modules, "processing", fake_proc)
+
+    dock.generate_grid()
+    dock.add_layers_to_project()
+    dock.download_dem()
+
+    assert len(logged_errors) == 3
+    assert "gerar_grade_voo" in logged_errors[0]
+    assert "gerar_grade_voo" in logged_errors[1]
+    assert "baixar_dem_copernicus" in logged_errors[2]
+
+    QgsProject.instance().removeMapLayer(layer)

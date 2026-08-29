@@ -129,3 +129,31 @@ def test_dock_preview_recreation_on_param_change_and_unload(qgis_app):
     assert QgsProject.instance().mapLayer(new_line_layer_id) is None
 
     QgsProject.instance().removeMapLayer(layer)
+
+
+def test_preview_manager_algorithm_exception_handling(qgis_app, monkeypatch):
+    """Test that algorithm exception in preview manager calls log_warning."""
+    from unittest.mock import patch
+
+    from qgc4qgis.processing.alg_survey_grid import SurveyGridAlgorithm
+
+    layer = create_sample_polygon_layer()
+    QgsProject.instance().addMapLayer(layer)
+
+    pm = FlightPreviewManager()
+    params = {"INPUT": layer}
+
+    def mock_process_algorithm(self, params, context, feedback):
+        raise RuntimeError("Algorithm failure simulation")
+
+    monkeypatch.setattr(SurveyGridAlgorithm, "processAlgorithm", mock_process_algorithm)
+
+    with patch("qgc4qgis.gui.preview.log_warning") as mock_log:
+        pm.update_preview(params)
+        mock_log.assert_called_once()
+        assert (
+            "Erro ao gerar pré-visualização de linhas de voo: Algorithm failure simulation"
+            in mock_log.call_args[0][0]
+        )
+
+    QgsProject.instance().removeMapLayer(layer)
