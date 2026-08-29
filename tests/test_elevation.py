@@ -231,18 +231,20 @@ def test_elevation_module_does_not_import_osgeo_on_load():
 
 
 def test_build_dem_geotiff_does_not_import_gdal_array(tmp_path):
-    """Verify build_dem_geotiff does not import osgeo.gdal_array or numpy in subprocess."""
+    """Verify build_dem_geotiff does not load osgeo.gdal_array or numpy beyond the import baseline (newer QGIS images import numpy via qgis.core itself)."""
     repo_root = str(Path(__file__).resolve().parents[1])
     geotiff_path = str(tmp_path / "dem_test.tif")
     script = f"""import sys
 sys.path.insert(0, {repo_root!r})
 from qgc4qgis.core.elevation import CarpetTile, build_dem_geotiff
 
+baseline = set(sys.modules)
 tile = CarpetTile(0.0, 0.0, 0.01, 0.01, [[1.0, 2.0], [3.0, 4.0]])
 build_dem_geotiff([tile], {geotiff_path!r})
 
+novos = set(sys.modules) - baseline
 print("osgeo.gdal_array" in sys.modules)
-print("numpy" in sys.modules)
+print("numpy" in novos)
 """
     result = subprocess.run(
         [sys.executable, "-c", script],

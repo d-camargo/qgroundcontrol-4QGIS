@@ -9,7 +9,7 @@ Generates WPML XML template files (template.kml) conforming to DJI D9 WPML v1.0.
 """
 
 import time
-import xml.etree.ElementTree as ET
+from qgc4qgis.core import xmlwrite as ET
 import zipfile
 from collections.abc import Sequence
 from pathlib import Path

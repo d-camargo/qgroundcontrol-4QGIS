@@ -10,6 +10,7 @@ from qgis.core import (
     QgsVectorLayer,
 )
 
+from qgc4qgis.log import log_warning
 from qgc4qgis.processing.alg_survey_grid import SurveyGridAlgorithm
 
 
@@ -129,5 +130,5 @@ class FlightPreviewManager:
                         project.addMapLayer(line_layer)
                         self.line_layer_id = line_layer.id()
                         self.line_layer = line_layer
-        except Exception:
-            pass
+        except Exception as e:
+            log_warning(f"Erro ao gerar pré-visualização de linhas de voo: {e}")

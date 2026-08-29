@@ -41,6 +41,7 @@ from qgc4qgis.core.route import route_from_transects
 from qgc4qgis.core.settings import load_project_settings, save_project_settings
 from qgc4qgis.core.stats import calculate_flight_stats, calculate_polygon_area
 from qgc4qgis.gui.preview import FlightPreviewManager
+from qgc4qgis.log import log_error, log_warning
 
 try:
     NO_FRAME = QFrame.Shape.NoFrame  # Qt6 (PyQt6)
@@ -846,7 +847,11 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para gerar_grade_voo.")
+            return
 
+        try:
             proc_params = dict(params)
             feat_id = proc_params.pop("FEATURE_ID", None)
 
@@ -860,9 +865,8 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
             proc_params["OUTPUT"] = "memory:"
             processing.run("qgc4qgis:gerar_grade_voo", proc_params)
-        except Exception:
-            # Standalone test or headless fallback
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:gerar_grade_voo: {e}")
 
     def export_plan(self, file_path: str | None = None) -> str | None:
         """Export flight plan to a QGroundControl (.plan) file using ExportPlanAlgorithm (Fase 3)."""
@@ -900,11 +904,14 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para exportar_plano_qgc.")
+            return file_path
 
+        try:
             processing.run("qgc4qgis:exportar_plano_qgc", proc_params)
-        except Exception:
-            # Standalone test or headless fallback
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:exportar_plano_qgc: {e}")
 
         return file_path
 
@@ -944,14 +951,17 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para exportar_litchi_csv.")
+            return file_path
 
+        try:
             processing.run("qgc4qgis:exportar_litchi_csv", proc_params)
         except QgsProcessingException as e:
             if self.isVisible():
                 QMessageBox.critical(self, "Erro na exportação Litchi", str(e))
-        except Exception:
-            # Headless/standalone: processing framework unavailable
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:exportar_litchi_csv: {e}")
 
         return file_path
 
@@ -991,14 +1001,17 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para exportar_litchi_kml.")
+            return file_path
 
+        try:
             processing.run("qgc4qgis:exportar_litchi_kml", proc_params)
         except QgsProcessingException as e:
             if self.isVisible():
                 QMessageBox.critical(self, "Erro na exportação KML", str(e))
-        except Exception:
-            # Headless/standalone: processing framework unavailable
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:exportar_litchi_kml: {e}")
 
         return file_path
 
@@ -1038,14 +1051,17 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para exportar_dji_kmz.")
+            return file_path
 
+        try:
             processing.run("qgc4qgis:exportar_dji_kmz", proc_params)
         except QgsProcessingException as e:
             if self.isVisible():
                 QMessageBox.critical(self, "Erro na exportação DJI", str(e))
-        except Exception:
-            # Headless/standalone: processing framework unavailable
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:exportar_dji_kmz: {e}")
 
         return file_path
 
@@ -1062,7 +1078,11 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para gerar_grade_voo.")
+            return
 
+        try:
             proc_params = dict(params)
             feat_id = proc_params.pop("FEATURE_ID", None)
 
@@ -1079,9 +1099,8 @@ class QgcPlanningDockWidget(QgsDockWidget):
                 processing.runAndLoadResults("qgc4qgis:gerar_grade_voo", proc_params)
             except AttributeError:
                 processing.run("qgc4qgis:gerar_grade_voo", proc_params)
-        except Exception:
-            # Standalone test or headless fallback
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:gerar_grade_voo: {e}")
 
     def download_dem(self) -> None:
         """Download Copernicus DEM for selected polygon layer extent and add to project."""
@@ -1094,7 +1113,11 @@ class QgcPlanningDockWidget(QgsDockWidget):
 
         try:
             import processing
+        except ImportError:
+            log_warning("Módulo processing indisponível para baixar_dem_copernicus.")
+            return
 
+        try:
             proc_params: dict[str, Any] = {}
             feat_id = params.get("FEATURE_ID")
 
@@ -1119,6 +1142,5 @@ class QgcPlanningDockWidget(QgsDockWidget):
                     dem_layer.setMetadata(meta)
                     QgsProject.instance().addMapLayer(dem_layer)
                     self.cmb_elevation_layer.setLayer(dem_layer)
-        except Exception:
-            # Standalone test or headless fallback
-            pass
+        except Exception as e:
+            log_error(f"Erro ao executar qgc4qgis:baixar_dem_copernicus: {e}")
