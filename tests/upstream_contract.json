@@ -1,0 +1,26 @@
+{
+  "_comment": "Upstream facts qgc4qgis depends on. Refreshed by tests/upstream_sync.py; asserted by tests/test_upstream_contract.py.",
+  "upstream": "mavlink/qgroundcontrol",
+  "ref": "master",
+  "refreshed_at": "2026-08-30 UTC",
+  "camera_metadata": {
+    "path": "src/Camera/CameraMetaData.json",
+    "sha256": "2e9e85c8879bce9a9fd4e14f54c3122d99a9f7318280dde007cc30e7bae71e12"
+  },
+  "plan_file_version": {
+    "path": "src/MissionManager/PlanMasterController.h",
+    "value": 1
+  },
+  "survey_version_range": {
+    "path": "src/MissionManager/SurveyComplexItem.cc",
+    "min": 2,
+    "max": 5
+  },
+  "watched_sources": {
+    "src/MissionManager/SurveyComplexItem.cc": "bec8819274a3f1cb60e0e4182d19e03aeb4f63f2",
+    "src/MissionManager/SurveyComplexItem.h": "bec8819274a3f1cb60e0e4182d19e03aeb4f63f2",
+    "src/MissionManager/CameraCalc.cc": "3ebcc573624de5e2864d2b2ddee4536e7a3b199f",
+    "src/MissionManager/CameraCalc.h": "12a9cb91bc23f2fd2a5621a9970f2fa6286394c0",
+    "src/MissionManager/TransectStyleComplexItem.cc": "3ebcc573624de5e2864d2b2ddee4536e7a3b199f"
+  }
+}

@@ -1,0 +1,53 @@
+name: qgc4qgis upstream sync
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Monday at 3:00 AM UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    if: github.repository == 'd-camargo/qgroundcontrol-4QGIS'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Refresh upstream QGC contract
+        id: refresh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          python tests/upstream_sync.py --refresh --pr-body /tmp/pr-body.md
+          rc=$?
+          set -e
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          if [ "$rc" -eq 1 ]; then
+            echo "::error::upstream refresh failed (network or upstream layout change); no PR will be opened."
+            exit 1
+          fi
+
+      - name: Create Pull Request
+        if: steps.refresh.outputs.rc == '0' || steps.refresh.outputs.rc == '2'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: qgc4qgis/upstream-sync
+          title: "chore(qgc4qgis): sync upstream QGC contract"
+          commit-message: "chore(qgc4qgis): sync upstream QGC contract"
+          body-path: /tmp/pr-body.md
+
+      - name: Fail if plugin drifted from upstream
+        if: steps.refresh.outputs.rc == '2'
+        run: |
+          echo "::error::qgc4qgis no longer matches the upstream QGC contract - see the sync PR just opened for details."
+          exit 1

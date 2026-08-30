@@ -135,6 +135,14 @@ qgis-uninstall:
 qgis-test:
     pytest -q
 
+# Run QGIS plugin tests under Qt6 (podman container; the host only has Qt5/PyQGIS)
+qgis-test-qt6:
+    podman run --rm --entrypoint python3 -v "{{ justfile_directory() }}":/src -w /src -e QT_QPA_PLATFORM=offscreen -e PYTHONDONTWRITEBYTECODE=1 docker.io/qgis/qgis:4.2.2-trixie -m pytest -q -p no:cacheprovider
+
+# Check qgc4qgis against the upstream QGC contract (no changes; add --refresh manually to update it)
+qgis-upstream-check:
+    {{ python }} tests/upstream_sync.py
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Utilities
