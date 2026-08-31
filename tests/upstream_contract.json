@@ -2,7 +2,7 @@
   "_comment": "Upstream facts qgc4qgis depends on. Refreshed by tests/upstream_sync.py; asserted by tests/test_upstream_contract.py.",
   "upstream": "mavlink/qgroundcontrol",
   "ref": "master",
-  "refreshed_at": "2026-08-30 UTC",
+  "refreshed_at": "2026-08-31 UTC",
   "camera_metadata": {
     "path": "src/Camera/CameraMetaData.json",
     "sha256": "2e9e85c8879bce9a9fd4e14f54c3122d99a9f7318280dde007cc30e7bae71e12"
