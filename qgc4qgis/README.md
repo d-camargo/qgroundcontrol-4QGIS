@@ -1,6 +1,6 @@
 # QGC4QGIS — QGroundControl Flight Planning Plugin for QGIS
 
-> Portuguese version: [README.pt-BR.md](README.pt-BR.md)
+> Documentation: https://qgr4qgis.dcamargo.com.br | Portuguese version: [README.pt-BR.md](README.pt-BR.md)
 
 **QGC4QGIS** is a QGIS *plugin* that integrates **QGroundControl (QGC)** photogrammetric flight planning features directly into the GIS environment. It lets you generate flight grids (*Survey Grids*), simulate photo centers and footprints, calculate mission statistics, and export flight plan files in QGroundControl's native `.plan` format.
 

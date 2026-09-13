@@ -1,6 +1,6 @@
 # QGC4QGIS — Complemento de Planejamento de Voo do QGroundControl para QGIS
 
-> Versão em inglês: [README.md](README.md)
+> Documentação: https://qgr4qgis.dcamargo.com.br | Versão em inglês: [README.md](README.md)
 
 O **QGC4QGIS** é um complemento (*plugin*) para o QGIS que integra as funcionalidades de planejamento de voo fotogramétrico do **QGroundControl (QGC)** diretamente no ambiente GIS. Ele permite gerar grades de voo (*Survey Grids*), simular centros de tomada de foto e pegadas (*footprints*), calcular estatísticas da missão e exportar arquivos de plano de voo no formato nativo `.plan` do QGroundControl.
 

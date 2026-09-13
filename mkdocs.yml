@@ -1,0 +1,73 @@
+site_name: QGC4QGIS
+site_url: https://qgr4qgis.dcamargo.com.br/
+repo_url: https://github.com/d-camargo/qgroundcontrol-4QGIS
+edit_uri: edit/master/docs-qgc4qgis/
+docs_dir: docs-qgc4qgis
+
+theme:
+  name: material
+  language: en
+  logo: assets/icon.svg
+  favicon: assets/icon.svg
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: pt
+          name: Português (Brasil)
+          build: true
+          nav_translations:
+            Home: Início
+            Installation: Instalação
+            Flight planning panel: Painel de planejamento de voo
+            Exports: Exportações
+            Terrain and elevation: Terreno e elevação
+            Processing algorithms: Algoritmos do Processing
+            Changelog: Histórico de alterações
+      fallback_to_default: true
+
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    absolute_links: warn
+    unrecognized_links: warn
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Flight planning panel: workflow.md
+  - Exports: exports.md
+  - Terrain and elevation: elevation.md
+  - Processing algorithms: algorithms.md
+  - Changelog: changelog.md
