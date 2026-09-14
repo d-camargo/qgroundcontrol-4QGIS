@@ -15,14 +15,18 @@ amostrado no `.plan` bate com o que o QGC recalcula.
     QGIS **3.34 → 4.x** (`qgisMinimumVersion=3.34`, `qgisMaximumVersion=4.99`)
     e **Qt5 e Qt6** (`supportsQt6=True`).
 
+O QGC4QGIS está publicado no repositório oficial de plugins do QGIS, em
+[plugins.qgis.org](https://plugins.qgis.org/plugins/qgc4qgis/), com o selo
+**QGIS 4 Ready**.
+
 <div class="grid cards" markdown>
 
 - **[Instalação](installation.md)**
 
     ---
 
-    Instalar por cópia/symlink ou pelo zip da release, e os requisitos do
-    plugin.
+    Instalar pelo repositório oficial de plugins do QGIS, pelo zip da release
+    ou por cópia/symlink — e os requisitos do plugin.
 
 - **[Painel de planejamento de voo](workflow.md)**
 

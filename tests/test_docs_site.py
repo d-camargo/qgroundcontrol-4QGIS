@@ -274,3 +274,25 @@ def test_gate7_provider_ids_and_installation_mentions():
         assert mention in inst_pt_text, (
             f"{docs_dir}/installation.pt.md: menção a '{mention}' não encontrada"
         )
+
+
+def test_gate8_installation_urls():
+    """Gate 8: installation pages contain QGIS plugin repository and GitHub release URLs."""
+    config = _load_mkdocs_config()
+    docs_dir = config["docs_dir"]
+    docs_path = REPO_ROOT / docs_dir
+
+    plugin_url = "plugins.qgis.org/plugins/qgc4qgis"
+    release_url = "github.com/d-camargo/qgroundcontrol-4QGIS/releases"
+
+    for filename in ("installation.md", "installation.pt.md"):
+        filepath = docs_path / filename
+        assert filepath.exists(), f"{docs_dir}/{filename}: arquivo não encontrado"
+        text = filepath.read_text(encoding="utf-8")
+        assert plugin_url in text, (
+            f"{docs_dir}/{filename}: URL '{plugin_url}' não encontrada"
+        )
+        assert release_url in text, (
+            f"{docs_dir}/{filename}: URL '{release_url}' não encontrada"
+        )
+

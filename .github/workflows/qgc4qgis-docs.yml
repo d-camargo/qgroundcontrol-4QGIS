@@ -9,6 +9,12 @@ on:
       - 'mkdocs.yml'
       - 'requirements-docs.txt'
       - '.github/workflows/qgc4qgis-docs.yml'
+  pull_request:
+    paths:
+      - 'docs-qgc4qgis/**'
+      - 'mkdocs.yml'
+      - 'requirements-docs.txt'
+      - '.github/workflows/qgc4qgis-docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -47,6 +53,7 @@ jobs:
           path: site
 
   deploy:
+    if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     environment:

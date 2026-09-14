@@ -1,5 +1,6 @@
 """Pytest setup and fixtures for qgc4qgis plugin tests."""
 
+import gc
 import os
 import sys
 
@@ -18,6 +19,23 @@ for path in QGIS_PLUGIN_PATHS:
 PLUGIN_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PLUGIN_DIR not in sys.path:
     sys.path.insert(0, PLUGIN_DIR)
+
+
+@pytest.fixture(autouse=True)
+def _collect_widget_cycles():
+    """Coleta ciclos de referência (dock widgets órfãos) ENTRE testes.
+
+    ``QgcPlanningDockWidget`` sem parent fica preso num ciclo PyQt (sinal do
+    filho → bound method → dock) e só morre no GC. Se um dock zumbi sobrevive
+    até um ``removeAllMapLayers()`` de teste posterior, o slot
+    ``layerChanged`` roda sobre camada já deletada, a RuntimeError escapa por
+    um slot disparado de dentro do C++ e o PyQt5/Qt6 aborta o processo
+    (``qFatal``) ANTES de o pytest reportar. Coletar o GC num ponto quiescente
+    (fim de cada teste) destrói os docks deterministicamente e elimina a
+    janela de crash — medido no container qgis3 3.44/Qt5 em 2026-09-14.
+    """
+    yield
+    gc.collect()
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -8,7 +8,24 @@
 
 ## Installation methods
 
-### Method A: direct copy (recommended for development)
+### Method A: QGIS Plugin Repository (recommended)
+
+1. In QGIS, go to the **Plugins** menu → **Manage and Install Plugins...**
+2. Open the **All** tab and search for **QGC4QGIS**.
+3. Click **Install Plugin**.
+
+The plugin is published at <https://plugins.qgis.org/plugins/qgc4qgis/> with
+the **QGIS 4 Ready** badge.
+
+### Method B: ZIP from the GitHub release
+
+1. Download `qgc4qgis.<version>.zip` from
+   <https://github.com/d-camargo/qgroundcontrol-4QGIS/releases/latest>.
+2. In QGIS, go to the **Plugins** menu → **Manage and Install Plugins...**
+3. Select the **Install from ZIP** tab.
+4. Select the downloaded `.zip` file and click **Install Plugin**.
+
+### Method C: symlink (development)
 
 Copy or create a symbolic link of the `qgc4qgis` folder into your QGIS profile's
 plugins directory:
@@ -32,12 +49,8 @@ plugins directory:
   ~/Library/Application Support/QGIS/QGIS3/profiles/default/python/plugins/qgc4qgis
   ```
 
-### Method B: installation via ZIP file
-
-1. Compress the `qgc4qgis` folder into a `.zip` file.
-2. In QGIS, go to the **Plugins** menu → **Manage and Install Plugins...**
-3. Select the **Install from ZIP** tab.
-4. Select the `.zip` file you created and click **Install Plugin**.
+Compressing the `qgc4qgis` folder into a `.zip` file is useful to test a ZIP
+before the release, via the **Install from ZIP** tab.
 
 ## Activation
 
